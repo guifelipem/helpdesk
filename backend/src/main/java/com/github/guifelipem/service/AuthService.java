@@ -4,6 +4,7 @@ import com.github.guifelipem.dto.auth.RegisterRequest;
 import com.github.guifelipem.dto.auth.RegisterResponse;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.Role;
+import com.github.guifelipem.exception.EmailAlreadyExistsException;
 import com.github.guifelipem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,7 +22,7 @@ public class AuthService {
     public RegisterResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Email já cadastrado");
+            throw new EmailAlreadyExistsException("Email já cadastrado");
         }
 
         User user = User.builder()
