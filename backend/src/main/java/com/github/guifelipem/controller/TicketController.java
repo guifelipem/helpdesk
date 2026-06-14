@@ -3,6 +3,8 @@ package com.github.guifelipem.controller;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
+import com.github.guifelipem.enums.TicketPriority;
+import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.service.TicketService;
 import jakarta.validation.Valid;
@@ -52,6 +54,16 @@ public class TicketController {
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @PatchMapping("/{id}/assign/me")
     public ResponseEntity<TicketResponse> assignToMe(@PathVariable Long id) {
+
         return ResponseEntity.ok(ticketService.assignToMe(id));
+    }
+
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<TicketResponse>> findOpenTickets(
+            @RequestParam(required = false) TicketStatus status,
+            @RequestParam(required = false)TicketPriority priority
+            ) {
+        return ResponseEntity.ok(ticketService.findAll(status, priority));
     }
 }

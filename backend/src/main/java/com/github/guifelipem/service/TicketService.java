@@ -6,7 +6,9 @@ import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
+import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.TicketRepository;
@@ -110,6 +112,10 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
+        if (ticket.getAssignedTo() != null) {
+            throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
+        }
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String email = authentication.getName();
@@ -125,6 +131,14 @@ public class TicketService {
         Ticket savedTicket = ticketRepository.save(ticket);
 
         return toResponse(savedTicket);
+    }
+
+    public List<TicketResponse> findAll(TicketStatus status, TicketPriority priority) {
+
+        return ticketRepository.findAll().stream()
+                .filter(ticket -> status == null || ticket.getStatus() == status)
+                .filter(ticket -> priority == null || ticket.getPriority() == priority)
+                .map(this::toResponse).toList();
     }
 
 }
