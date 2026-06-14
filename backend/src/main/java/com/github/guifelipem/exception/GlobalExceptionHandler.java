@@ -1,9 +1,8 @@
 package com.github.guifelipem.exception;
 
-import com.github.guifelipem.dto.ticket.TicketResponse;
-import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -54,7 +53,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.FORBIDDEN.value(),
-                ex.getMessage()
+                "Você não tem permissão para acessar este recurso"
         );
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);

@@ -8,14 +8,11 @@ import java.time.LocalDateTime;
 public record TicketResponse(
 
         Long id,
-
         String title,
-
         String description,
-
         TicketStatus status,
-
         TicketPriority priority,
-
-        LocalDateTime createdAt
+        AssignedAgentResponse assignedTo,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

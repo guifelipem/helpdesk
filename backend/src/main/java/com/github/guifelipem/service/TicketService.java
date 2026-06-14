@@ -1,12 +1,12 @@
 package com.github.guifelipem.service;
 
+import com.github.guifelipem.dto.ticket.AssignedAgentResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketStatus;
-import com.github.guifelipem.exception.AccessDeniedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.TicketRepository;
@@ -49,14 +49,7 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        return new TicketResponse(
-                savedTicket.getId(),
-                savedTicket.getTitle(),
-                savedTicket.getDescription(),
-                savedTicket.getStatus(),
-                savedTicket.getPriority(),
-                savedTicket.getCreatedAt()
-        );
+        return toResponse(savedTicket);
     }
 
     public List<TicketResponse> findMyTickets() {
@@ -74,13 +67,18 @@ public class TicketService {
 
     private TicketResponse toResponse(Ticket ticket) {
 
+        AssignedAgentResponse assignedTo = ticket.getAssignedTo() == null ? null
+                : new AssignedAgentResponse(ticket.getAssignedTo().getId(), ticket.getAssignedTo().getName());
+
         return new TicketResponse(
                 ticket.getId(),
                 ticket.getTitle(),
                 ticket.getDescription(),
                 ticket.getStatus(),
                 ticket.getPriority(),
-                ticket.getCreatedAt()
+                assignedTo,
+                ticket.getCreatedAt(),
+                ticket.getUpdatedAt()
         );
     }
 
@@ -90,15 +88,6 @@ public class TicketService {
                     new TicketNotFoundException("Chamado não encontrado")
         );
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        if (!ticket.getCreatedBy().getEmail().equals(email)) {
-
-            throw new AccessDeniedException("Você não tem acesso a este chamado");
-        }
-
         return toResponse(ticket);
     }
 
@@ -107,16 +96,30 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId).
                 orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
+        ticket.setStatus(request.status());
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        return toResponse(savedTicket);
+    }
+
+    @Transactional
+    public TicketResponse assignToMe(Long ticketId) {
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String email = authentication.getName();
 
-        if (!ticket.getCreatedBy().getEmail().equals(email)) {
+        User agent = userRepository.findByEmail(email).orElseThrow(() ->
+                new UserNotFoundException("Usuário não encontrado")
+        );
 
-            throw new AccessDeniedException("Você não tem acesso a este chamado");
-        }
-
-        ticket.setStatus(request.status());
+        ticket.setAssignedTo(agent);
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
         ticket.setUpdatedAt(LocalDateTime.now());
 
         Ticket savedTicket = ticketRepository.save(ticket);

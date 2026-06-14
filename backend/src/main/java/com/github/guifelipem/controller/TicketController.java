@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,27 +21,37 @@ public class TicketController {
 
     private final TicketService ticketService;
 
+    @PreAuthorize("hasRole('CLIENT')")
     @PostMapping
     public ResponseEntity<TicketResponse> createTicket(@RequestBody @Valid CreateTicketRequest request) {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.create(request));
     }
 
+    @PreAuthorize("hasRole('CLIENT')")
     @GetMapping("/me")
     public ResponseEntity<List<TicketResponse>> findMyTickets() {
 
         return ResponseEntity.ok(ticketService.findMyTickets());
     }
 
+    @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<TicketResponse> findById(@PathVariable Long id) {
         return ResponseEntity.ok(ticketService.findById(id));
     }
 
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @PatchMapping("/{id}/status")
     public ResponseEntity<TicketResponse> updateStatus(@PathVariable Long id,
                                                        @RequestBody @Valid UpdateTicketStatusRequest request) {
 
         return ResponseEntity.ok(ticketService.updateStatus(id, request));
+    }
+
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @PatchMapping("/{id}/assign/me")
+    public ResponseEntity<TicketResponse> assignToMe(@PathVariable Long id) {
+        return ResponseEntity.ok(ticketService.assignToMe(id));
     }
 }
