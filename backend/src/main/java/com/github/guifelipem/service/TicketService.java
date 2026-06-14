@@ -2,6 +2,7 @@ package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketStatus;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -70,6 +72,18 @@ public class TicketService {
         return ticketRepository.findByCreatedBy(user).stream().map(this::toResponse).toList();
     }
 
+    private TicketResponse toResponse(Ticket ticket) {
+
+        return new TicketResponse(
+                ticket.getId(),
+                ticket.getTitle(),
+                ticket.getDescription(),
+                ticket.getStatus(),
+                ticket.getPriority(),
+                ticket.getCreatedAt()
+        );
+    }
+
     public TicketResponse findById(Long id) {
 
         Ticket ticket = ticketRepository.findById(id).orElseThrow(() ->
@@ -88,15 +102,26 @@ public class TicketService {
         return toResponse(ticket);
     }
 
-    private TicketResponse toResponse(Ticket ticket) {
+    @Transactional
+    public TicketResponse updateStatus(Long ticketId, UpdateTicketStatusRequest request) {
+        Ticket ticket = ticketRepository.findById(ticketId).
+                orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
-        return new TicketResponse(
-                ticket.getId(),
-                ticket.getTitle(),
-                ticket.getDescription(),
-                ticket.getStatus(),
-                ticket.getPriority(),
-                ticket.getCreatedAt()
-        );
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        if (!ticket.getCreatedBy().getEmail().equals(email)) {
+
+            throw new AccessDeniedException("Você não tem acesso a este chamado");
+        }
+
+        ticket.setStatus(request.status());
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        return toResponse(savedTicket);
     }
+
 }

@@ -2,6 +2,7 @@ package com.github.guifelipem.controller;
 
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.service.TicketService;
 import jakarta.validation.Valid;
@@ -34,5 +35,12 @@ public class TicketController {
     @GetMapping("/{id}")
     public ResponseEntity<TicketResponse> findById(@PathVariable Long id) {
         return ResponseEntity.ok(ticketService.findById(id));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<TicketResponse> updateStatus(@PathVariable Long id,
+                                                       @RequestBody @Valid UpdateTicketStatusRequest request) {
+
+        return ResponseEntity.ok(ticketService.updateStatus(id, request));
     }
 }
