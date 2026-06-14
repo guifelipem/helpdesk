@@ -1,11 +1,11 @@
 package com.github.guifelipem.controller;
 
+import com.github.guifelipem.dto.history.TicketHistoryResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
-import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.service.TicketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

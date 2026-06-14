@@ -5,12 +5,14 @@ import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
+import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.exception.UserNotFoundException;
+import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,16 +30,11 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final TicketHistoryRepository ticketHistoryRepository;
 
     public TicketResponse create(CreateTicketRequest request) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        User user = userRepository.findByEmail(email).orElseThrow(() ->
-                new UserNotFoundException("Usuário não encontrado")
-        );
+        User user = getAuthenticatedUser();
 
         Ticket ticket = Ticket.builder()
                 .title(request.title())
@@ -51,18 +48,14 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
+        createHistory(savedTicket, "TICKET_CREATED", null, savedTicket.getStatus().name(), user);
+
         return toResponse(savedTicket);
     }
 
     public List<TicketResponse> findMyTickets() {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        User user = userRepository.findByEmail(email).orElseThrow(() ->
-                new UserNotFoundException("Usuário não encontrado")
-        );
+        User user = getAuthenticatedUser();
 
         return ticketRepository.findByCreatedBy(user).stream().map(this::toResponse).toList();
     }
@@ -98,10 +91,16 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId).
                 orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
+        User user = getAuthenticatedUser();
+
+        TicketStatus oldStatus = ticket.getStatus();
+
         ticket.setStatus(request.status());
         ticket.setUpdatedAt(LocalDateTime.now());
 
         Ticket savedTicket = ticketRepository.save(ticket);
+
+        createHistory(savedTicket, "STATUS_CHANGED", oldStatus.name(), request.status().name(), user);
 
         return toResponse(savedTicket);
     }
@@ -116,19 +115,15 @@ public class TicketService {
             throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
         }
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        User agent = userRepository.findByEmail(email).orElseThrow(() ->
-                new UserNotFoundException("Usuário não encontrado")
-        );
+        User agent = getAuthenticatedUser();
 
         ticket.setAssignedTo(agent);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
         ticket.setUpdatedAt(LocalDateTime.now());
 
         Ticket savedTicket = ticketRepository.save(ticket);
+
+        createHistory(ticket, "TICKET_ASSIGNED", null, agent.getName(), agent);
 
         return toResponse(savedTicket);
     }
@@ -139,6 +134,31 @@ public class TicketService {
                 .filter(ticket -> status == null || ticket.getStatus() == status)
                 .filter(ticket -> priority == null || ticket.getPriority() == priority)
                 .map(this::toResponse).toList();
+    }
+
+    private void createHistory(Ticket ticket, String action, String oldValue, String newValue, User performedBy) {
+
+        TicketHistory history = TicketHistory.builder()
+                .ticket(ticket)
+                .action(action)
+                .oldValue(oldValue)
+                .newValue(newValue)
+                .performedBy(performedBy)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        ticketHistoryRepository.save(history);
+    }
+
+    private User getAuthenticatedUser() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email).orElseThrow(() ->
+                new UserNotFoundException("Usuário não encontrado")
+        );
     }
 
 }
