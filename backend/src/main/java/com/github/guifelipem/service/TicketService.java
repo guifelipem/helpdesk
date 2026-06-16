@@ -10,7 +10,7 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.Role;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
-import com.github.guifelipem.exception.AccessDeniedException;
+import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.exception.UserNotFoundException;
@@ -88,7 +88,7 @@ public class TicketService {
         User user = getAuthenticatedUser();
 
         if (user.getRole() == Role.CLIENT && !ticket.getCreatedBy().getId().equals(user.getId())) {
-            throw new AccessDeniedException("Você não tem permissão para visualizar este chamado");
+            throw new ForbiddenException("Você não tem permissão para visualizar este chamado");
         }
 
         return toResponse(ticket);
