@@ -52,6 +52,7 @@ public class TicketService {
         return toResponse(savedTicket);
     }
 
+    @Transactional(readOnly = true)
     public List<TicketResponse> findMyTickets() {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
@@ -76,6 +77,7 @@ public class TicketService {
         );
     }
 
+    @Transactional(readOnly = true)
     public TicketResponse findById(Long id) {
 
         Ticket ticket = ticketRepository.findById(id).orElseThrow(() ->
