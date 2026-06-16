@@ -1,5 +1,6 @@
 package com.github.guifelipem.service;
 
+import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.AssignedAgentResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
@@ -17,6 +18,8 @@ import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -136,10 +139,25 @@ public class TicketService {
     }
 
     @Transactional(readOnly = true)
-    public List<TicketResponse> findAll(TicketStatus status, TicketPriority priority) {
+    public PageResponse<TicketResponse> findAll(
+            TicketStatus status,
+            TicketPriority priority,
+            String search,
+            Pageable pageable
+    ) {
 
-        return ticketRepository.findAllWithFilters(status, priority).stream()
-                .map(this::toResponse).toList();
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
+
+        Page<Ticket> tickets = ticketRepository.findAllWithFilters(status, priority, normalizedSearch, pageable);
+
+        return new PageResponse<>(
+                tickets.getContent().stream().map(this::toResponse).toList(),
+                tickets.getNumber(),
+                tickets.getSize(),
+                tickets.getTotalElements(),
+                tickets.getTotalPages(),
+                tickets.isLast()
+        );
     }
 
     private void createHistory(Ticket ticket, String action, String oldValue, String newValue, User performedBy) {

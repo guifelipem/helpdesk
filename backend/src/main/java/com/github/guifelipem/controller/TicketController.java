@@ -1,6 +1,6 @@
 package com.github.guifelipem.controller;
 
-import com.github.guifelipem.dto.history.TicketHistoryResponse;
+import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
@@ -9,6 +9,9 @@ import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.service.TicketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,10 +63,21 @@ public class TicketController {
 
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @GetMapping
-    public ResponseEntity<List<TicketResponse>> findOpenTickets(
+    public ResponseEntity<PageResponse<TicketResponse>> findAll(
             @RequestParam(required = false) TicketStatus status,
-            @RequestParam(required = false)TicketPriority priority
+            @RequestParam(required = false) TicketPriority priority,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort
             ) {
-        return ResponseEntity.ok(ticketService.findAll(status, priority));
+
+        String[] sortParams = sort.split(",");
+
+        Pageable pageable = PageRequest.of(page, size,
+                Sort.by(Sort.Direction.fromString(sortParams[1]), sortParams[0])
+        );
+
+        return ResponseEntity.ok(ticketService.findAll(status, priority, search, pageable));
     }
 }
