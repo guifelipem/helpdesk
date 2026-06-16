@@ -17,6 +17,7 @@ import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
+import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,12 +32,12 @@ import java.util.List;
 public class TicketService {
 
     private final TicketRepository ticketRepository;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
     private final TicketHistoryRepository ticketHistoryRepository;
 
     public TicketResponse create(CreateTicketRequest request) {
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         Ticket ticket = Ticket.builder()
                 .title(request.title())
@@ -57,7 +58,7 @@ public class TicketService {
 
     public List<TicketResponse> findMyTickets() {
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         return ticketRepository.findByCreatedBy(user).stream().map(this::toResponse).toList();
     }
@@ -85,7 +86,7 @@ public class TicketService {
                     new TicketNotFoundException("Chamado não encontrado")
         );
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         if (user.getRole() == Role.CLIENT && !ticket.getCreatedBy().getId().equals(user.getId())) {
             throw new ForbiddenException("Você não tem permissão para visualizar este chamado");
@@ -99,7 +100,7 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId).
                 orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         TicketStatus oldStatus = ticket.getStatus();
 
@@ -123,7 +124,7 @@ public class TicketService {
             throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
         }
 
-        User agent = getAuthenticatedUser();
+        User agent = authenticatedUserProvider.getAuthenticatedUser();
 
         ticket.setAssignedTo(agent);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
@@ -155,17 +156,6 @@ public class TicketService {
                 .build();
 
         ticketHistoryRepository.save(history);
-    }
-
-    private User getAuthenticatedUser() {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        return userRepository.findByEmail(email).orElseThrow(() ->
-                new UserNotFoundException("Usuário não encontrado")
-        );
     }
 
 }

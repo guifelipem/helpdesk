@@ -11,6 +11,7 @@ import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.CommentRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
+import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -27,12 +28,12 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final TicketRepository ticketRepository;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
     @Transactional
     public CommentResponse create(Long ticketId, CreateCommentRequest request) {
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() ->
                 new TicketNotFoundException("Chamado não encontrado"));
@@ -66,7 +67,7 @@ public class CommentService {
     @Transactional(readOnly = true)
     public List<CommentResponse> findByTicket(Long ticketId) {
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
@@ -96,14 +97,4 @@ public class CommentService {
         );
     }
 
-    private User getAuthenticatedUser() {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        return userRepository.findByEmail(email).orElseThrow(() ->
-                new UserNotFoundException("Usuário não encontrado")
-        );
-    }
 }
