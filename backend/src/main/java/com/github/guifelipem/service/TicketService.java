@@ -136,11 +136,10 @@ public class TicketService {
         return toResponse(savedTicket);
     }
 
+    @Transactional(readOnly = true)
     public List<TicketResponse> findAll(TicketStatus status, TicketPriority priority) {
 
-        return ticketRepository.findAll().stream()
-                .filter(ticket -> status == null || ticket.getStatus() == status)
-                .filter(ticket -> priority == null || ticket.getPriority() == priority)
+        return ticketRepository.findAllWithFilters(status, priority).stream()
                 .map(this::toResponse).toList();
     }
 
