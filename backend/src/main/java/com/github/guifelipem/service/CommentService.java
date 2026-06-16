@@ -5,17 +5,13 @@ import com.github.guifelipem.dto.comment.CreateCommentRequest;
 import com.github.guifelipem.entity.Comment;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
-import com.github.guifelipem.enums.Role;
+import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.TicketNotFoundException;
-import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.CommentRepository;
 import com.github.guifelipem.repository.TicketRepository;
-import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +34,7 @@ public class CommentService {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() ->
                 new TicketNotFoundException("Chamado não encontrado"));
 
-        boolean isClient = user.getRole() == Role.CLIENT;
+        boolean isClient = user.getRole() == UserRole.CLIENT;
         boolean isOwner = ticket.getCreatedBy().getId().equals(user.getId());
 
         if (isClient && !isOwner) {
@@ -72,7 +68,7 @@ public class CommentService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
-        boolean isClient = user.getRole() == Role.CLIENT;
+        boolean isClient = user.getRole() == UserRole.CLIENT;
         boolean isOwner = ticket.getCreatedBy().getId().equals(user.getId());
 
         if (isClient && !isOwner) {

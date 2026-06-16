@@ -1,6 +1,6 @@
 package com.github.guifelipem.entity;
 
-import com.github.guifelipem.enums.Role;
+import com.github.guifelipem.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,7 +30,7 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
+    private UserRole role;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

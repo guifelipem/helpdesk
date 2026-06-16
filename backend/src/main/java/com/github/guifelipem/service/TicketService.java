@@ -7,20 +7,16 @@ import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
-import com.github.guifelipem.enums.Role;
+import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
-import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
-import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -88,7 +84,7 @@ public class TicketService {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
-        if (user.getRole() == Role.CLIENT && !ticket.getCreatedBy().getId().equals(user.getId())) {
+        if (user.getRole() == UserRole.CLIENT && !ticket.getCreatedBy().getId().equals(user.getId())) {
             throw new ForbiddenException("Você não tem permissão para visualizar este chamado");
         }
 
