@@ -12,6 +12,7 @@ import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.exception.ForbiddenException;
+import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
@@ -98,19 +99,28 @@ public class TicketService {
 
     @Transactional
     public TicketResponse updateStatus(Long ticketId, UpdateTicketStatusRequest request) {
+
         Ticket ticket = ticketRepository.findById(ticketId).
                 orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
-        TicketStatus oldStatus = ticket.getStatus();
+        TicketStatus currentStatus = ticket.getStatus();
+        TicketStatus newStatus = request.status();
 
-        ticket.setStatus(request.status());
+        if (!currentStatus.canTransitionTo(newStatus)) {
+
+            throw new InvalidTicketStatusTransitionException(
+                    "Transição de status inválida: " + currentStatus + " -> " + newStatus
+            );
+        }
+
+        ticket.setStatus(newStatus);
         ticket.setUpdatedAt(LocalDateTime.now());
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "STATUS_CHANGED", oldStatus.name(), request.status().name(), user);
+        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), request.status().name(), user);
 
         return toResponse(savedTicket);
     }
@@ -120,6 +130,10 @@ public class TicketService {
 
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
+
+        if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new InvalidTicketStatusTransitionException("Chamado finalizado ou fechado não podem ser atribuídos.");
+        }
 
         if (ticket.getAssignedTo() != null) {
             throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
@@ -133,7 +147,7 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(ticket, "TICKET_ASSIGNED", null, agent.getName(), agent);
+        createHistory(savedTicket, "TICKET_ASSIGNED", null, agent.getName(), agent);
 
         return toResponse(savedTicket);
     }
