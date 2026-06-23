@@ -1,9 +1,6 @@
 package com.github.guifelipem.service;
 
-import com.github.guifelipem.dto.auth.LoginRequest;
-import com.github.guifelipem.dto.auth.LoginResponse;
-import com.github.guifelipem.dto.auth.RegisterRequest;
-import com.github.guifelipem.dto.auth.RegisterResponse;
+import com.github.guifelipem.dto.auth.*;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.EmailAlreadyExistsException;
@@ -65,5 +62,18 @@ public class AuthService {
         String token = jwtService.generateToken(user.getEmail());
 
         return new LoginResponse(token);
+    }
+
+    public MeResponse me(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new InvalidCredentialsException("Email ou senha inválidos"));
+
+        return new MeResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole()
+        );
     }
 }
