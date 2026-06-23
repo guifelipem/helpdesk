@@ -1,11 +1,9 @@
-import { Button } from "@/components/ui/button";
+import { RouterProvider } from "react-router-dom";
+
+import { router } from "@/app/router";
 
 function App() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-      <Button>Entrar no Help Desk</Button>
-    </main>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;
