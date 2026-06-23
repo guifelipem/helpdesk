@@ -22,5 +22,5 @@ jobs:
           java-version: 21
 
       - name: Build e testes
-        run: mvn clean package -DskipTests
+        run: mvn clean verify
         working-directory: backend
