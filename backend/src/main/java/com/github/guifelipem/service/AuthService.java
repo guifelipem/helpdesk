@@ -5,7 +5,7 @@ import com.github.guifelipem.dto.auth.LoginResponse;
 import com.github.guifelipem.dto.auth.RegisterRequest;
 import com.github.guifelipem.dto.auth.RegisterResponse;
 import com.github.guifelipem.entity.User;
-import com.github.guifelipem.enums.Role;
+import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.EmailAlreadyExistsException;
 import com.github.guifelipem.exception.InvalidCredentialsException;
 import com.github.guifelipem.repository.UserRepository;
@@ -34,7 +34,7 @@ public class AuthService {
                 .name(request.name())
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
-                .role(Role.CLIENT)
+                .role(UserRole.CLIENT)
                 .createdAt(LocalDateTime.now())
                 .build();
 
