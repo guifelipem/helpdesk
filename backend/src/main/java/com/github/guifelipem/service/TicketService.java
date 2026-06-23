@@ -1,5 +1,6 @@
 package com.github.guifelipem.service;
 
+import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.AssignedAgentResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
@@ -7,19 +8,19 @@ import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
-import com.github.guifelipem.enums.Role;
+import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
-import com.github.guifelipem.exception.AccessDeniedException;
+import com.github.guifelipem.exception.ForbiddenException;
+import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
-import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
-import com.github.guifelipem.repository.UserRepository;
+import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,12 +32,12 @@ import java.util.List;
 public class TicketService {
 
     private final TicketRepository ticketRepository;
-    private final UserRepository userRepository;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
     private final TicketHistoryRepository ticketHistoryRepository;
 
     public TicketResponse create(CreateTicketRequest request) {
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         Ticket ticket = Ticket.builder()
                 .title(request.title())
@@ -55,9 +56,10 @@ public class TicketService {
         return toResponse(savedTicket);
     }
 
+    @Transactional(readOnly = true)
     public List<TicketResponse> findMyTickets() {
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
         return ticketRepository.findByCreatedBy(user).stream().map(this::toResponse).toList();
     }
@@ -79,16 +81,17 @@ public class TicketService {
         );
     }
 
+    @Transactional(readOnly = true)
     public TicketResponse findById(Long id) {
 
         Ticket ticket = ticketRepository.findById(id).orElseThrow(() ->
                     new TicketNotFoundException("Chamado não encontrado")
         );
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
-        if (user.getRole() == Role.CLIENT && !ticket.getCreatedBy().getId().equals(user.getId())) {
-            throw new AccessDeniedException("Você não tem permissão para visualizar este chamado");
+        if (user.getRole() == UserRole.CLIENT && !ticket.getCreatedBy().getId().equals(user.getId())) {
+            throw new ForbiddenException("Você não tem permissão para visualizar este chamado");
         }
 
         return toResponse(ticket);
@@ -96,19 +99,28 @@ public class TicketService {
 
     @Transactional
     public TicketResponse updateStatus(Long ticketId, UpdateTicketStatusRequest request) {
+
         Ticket ticket = ticketRepository.findById(ticketId).
                 orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
-        User user = getAuthenticatedUser();
+        User user = authenticatedUserProvider.getAuthenticatedUser();
 
-        TicketStatus oldStatus = ticket.getStatus();
+        TicketStatus currentStatus = ticket.getStatus();
+        TicketStatus newStatus = request.status();
 
-        ticket.setStatus(request.status());
+        if (!currentStatus.canTransitionTo(newStatus)) {
+
+            throw new InvalidTicketStatusTransitionException(
+                    "Transição de status inválida: " + currentStatus + " -> " + newStatus
+            );
+        }
+
+        ticket.setStatus(newStatus);
         ticket.setUpdatedAt(LocalDateTime.now());
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "STATUS_CHANGED", oldStatus.name(), request.status().name(), user);
+        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), request.status().name(), user);
 
         return toResponse(savedTicket);
     }
@@ -119,11 +131,15 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
 
+        if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new InvalidTicketStatusTransitionException("Chamado finalizado ou fechado não podem ser atribuídos.");
+        }
+
         if (ticket.getAssignedTo() != null) {
             throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
         }
 
-        User agent = getAuthenticatedUser();
+        User agent = authenticatedUserProvider.getAuthenticatedUser();
 
         ticket.setAssignedTo(agent);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
@@ -131,17 +147,31 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(ticket, "TICKET_ASSIGNED", null, agent.getName(), agent);
+        createHistory(savedTicket, "TICKET_ASSIGNED", null, agent.getName(), agent);
 
         return toResponse(savedTicket);
     }
 
-    public List<TicketResponse> findAll(TicketStatus status, TicketPriority priority) {
+    @Transactional(readOnly = true)
+    public PageResponse<TicketResponse> findAll(
+            TicketStatus status,
+            TicketPriority priority,
+            String search,
+            Pageable pageable
+    ) {
 
-        return ticketRepository.findAll().stream()
-                .filter(ticket -> status == null || ticket.getStatus() == status)
-                .filter(ticket -> priority == null || ticket.getPriority() == priority)
-                .map(this::toResponse).toList();
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
+
+        Page<Ticket> tickets = ticketRepository.findAllWithFilters(status, priority, normalizedSearch, pageable);
+
+        return new PageResponse<>(
+                tickets.getContent().stream().map(this::toResponse).toList(),
+                tickets.getNumber(),
+                tickets.getSize(),
+                tickets.getTotalElements(),
+                tickets.getTotalPages(),
+                tickets.isLast()
+        );
     }
 
     private void createHistory(Ticket ticket, String action, String oldValue, String newValue, User performedBy) {
@@ -156,17 +186,6 @@ public class TicketService {
                 .build();
 
         ticketHistoryRepository.save(history);
-    }
-
-    private User getAuthenticatedUser() {
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        return userRepository.findByEmail(email).orElseThrow(() ->
-                new UserNotFoundException("Usuário não encontrado")
-        );
     }
 
 }
