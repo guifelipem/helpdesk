@@ -7,8 +7,10 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem("helpdesk:token");
 
-    if (token) {
-        config.headers.Authorization = 'Bearer ${token}';
+    const isAuthRoute = config.url === "/auth/login" || config.url === "/auth/register";
+
+    if (token && !isAuthRoute) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
 
     return config;
