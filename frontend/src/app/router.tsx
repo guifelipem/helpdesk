@@ -5,6 +5,7 @@ import { RegisterPage } from "@/pages/register/register-page";
 import { TicketDetailsPage } from "@/pages/tickets/ticket-details-page";
 import { TicketsPage } from "@/pages/tickets/tickets-page";
 import { ProtectedRoute } from "@/features/auth/components/protected.route"
+import { AppLayout } from "@/layouts/app-layout";
 
 export const router = createBrowserRouter([
     {
@@ -23,13 +24,19 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
             {
-                path: "/tickets",
-                element: <TicketsPage />,
-            },
-            {
-                path: "/tickets/:id",
-                element: <TicketDetailsPage />,
-            },
+                element: <AppLayout />,
+                children: [
+                    {
+                        path: "/tickets",
+                        element: <TicketsPage />,
+                    },
+                    {
+                        path: "/tickets/:id",
+                        element: <TicketDetailsPage />,
+                    },
+                ]
+            }
+
         ],
     },
 ]);

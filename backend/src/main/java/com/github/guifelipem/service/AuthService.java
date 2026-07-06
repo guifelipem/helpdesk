@@ -8,6 +8,7 @@ import com.github.guifelipem.exception.InvalidCredentialsException;
 import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -65,9 +66,8 @@ public class AuthService {
     }
 
     public MeResponse me(String email) {
-
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new InvalidCredentialsException("Email ou senha inválidos"));
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
 
         return new MeResponse(
                 user.getId(),
