@@ -33,7 +33,7 @@ export function LoginPage() {
 
       setToken(loginResponse.token);
 
-      const user = await getMe(loginResponse.token);
+      const user = await getMe();
 
       setUser(user);
 

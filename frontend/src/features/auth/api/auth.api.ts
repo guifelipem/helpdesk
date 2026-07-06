@@ -9,12 +9,8 @@ export async function login(request: LoginRequest) {
     return response.data;
 }
 
-export async function getMe(token?: string) {
-    const response = await api.get<User>("/auth/me", {
-        headers: token ? {
-            Authorization: `Bearer %{token}`,
-        } : undefined,
-    });
+export async function getMe() {
+    const response = await api.get<User>("/auth/me")
 
     return response.data;
 }
