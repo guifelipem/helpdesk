@@ -10,7 +10,7 @@ export function AppLayout() {
     return (
         <div className="min-h-screen bg-slate-100">
             <aside className="fixed left-0 top-0 h-screen w-64 bg-slate-900 px-4 py-6 text-white">
-                <h1 className="mb-8 text-x1 font-bold">Help Desk</h1>
+                <h1 className="mb-8 text-xl font-bold">Help Desk</h1>
 
                 <nav className="space-y-2">
                     <NavLink

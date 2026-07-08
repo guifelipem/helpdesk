@@ -1,20 +1,30 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 
 import { assignTicketToMe, createTicket, findAllTickets, findMyTickets, findTicketById, updateTicketStatus } from "../api/ticket.api";
 import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
 import { ticketQueryKeys } from "../constants/ticket-query-keys";
 
-export function useTickets(params?: FindAllTicketsParams) {
+import type { PageResponse } from "@/shared/types/page-response";
+import type { Ticket } from "../types/ticket.types";
+
+export function useTickets(
+    params?: FindAllTicketsParams,
+    options?: Omit<UseQueryOptions<PageResponse<Ticket>>, "queryKey" | "queryFn">
+) {
     return useQuery({
         queryKey: ticketQueryKeys.list(params),
         queryFn: () => findAllTickets(params),
+        ...options,
     });
 }
 
-export function useMyTickets() {
+export function useMyTickets(
+    options?: Omit<UseQueryOptions<Ticket[]>, "queryKey" | "queryFn">
+) {
     return useQuery({
         queryKey: [...ticketQueryKeys.all, "my"],
         queryFn: findMyTickets,
+        ...options,
     });
 }
 
