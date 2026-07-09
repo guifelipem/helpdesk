@@ -1,3 +1,5 @@
+import type { UserSummary } from "@/shared/types/user-summary";
+
 export type TicketStatus = 
     | "OPEN"
     | "IN_PROGRESS"
@@ -9,11 +11,6 @@ export type TicketPriority =
     | "LOW"
     | "MEDIUM"
     | "HIGH";
-
-export type UserSummary = {
-    id: number;
-    name: string;
-};
 
 export type Ticket = {
     id: number;

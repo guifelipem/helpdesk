@@ -2,6 +2,7 @@ package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.comment.CommentResponse;
 import com.github.guifelipem.dto.comment.CreateCommentRequest;
+import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.entity.Comment;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
@@ -83,12 +84,16 @@ public class CommentService {
 
     private CommentResponse toResponse(Comment comment) {
 
+        UserSummaryResponse author = new UserSummaryResponse(
+                comment.getUser().getId(),
+                comment.getUser().getName()
+        );
+
         return new CommentResponse(
                 comment.getId(),
                 comment.getMessage(),
                 comment.getIsInternal(),
-                comment.getUser().getId(),
-                comment.getUser().getName(),
+                author,
                 comment.getCreatedAt()
         );
     }

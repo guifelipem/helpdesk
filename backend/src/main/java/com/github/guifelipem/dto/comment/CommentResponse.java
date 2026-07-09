@@ -1,5 +1,7 @@
 package com.github.guifelipem.dto.comment;
 
+import com.github.guifelipem.dto.ticket.UserSummaryResponse;
+
 import java.time.LocalDateTime;
 
 public record CommentResponse(
@@ -7,7 +9,6 @@ public record CommentResponse(
         Long id,
         String message,
         Boolean isInternal,
-        Long authorId,
-        String authorName,
+        UserSummaryResponse author,
         LocalDateTime createdAt
 ) {}

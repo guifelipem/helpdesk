@@ -5,6 +5,7 @@ import { formatDate } from "@/shared/utils/format-date";
 import type { Ticket } from "../types/ticket.types";
 import { TicketPriorityBadge } from "./ticket-priority-badge";
 import { TicketStatusBadge } from "./ticket-status-badge";
+import { CommentSection } from "@/features/comments/components/comment-section";
 
 type TicketDetailsProps = { ticket: Ticket; };
 
@@ -73,17 +74,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Comentários</CardTitle>
-                </CardHeader>
-
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Comentários serão exibidos aqui.
-                    </p>
-                </CardContent>
-            </Card>
+            <CommentSection ticketId={ticket.id} />
 
             <Card>
                 <CardHeader>
