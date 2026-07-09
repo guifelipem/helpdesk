@@ -13,7 +13,7 @@ export function TicketsPage() {
         enabled: !isClient,
     });
 
-    const myTicketsQuery = useMyTickets({enabled: isClient,});
+    const myTicketsQuery = useMyTickets({ enabled: isClient, });
 
     const isPending = isClient ? myTicketsQuery.isPending : allTicketsQuery.isPending;
 
@@ -36,6 +36,11 @@ export function TicketsPage() {
                 <p>
                     {isClient ? "Você ainda não possui tickets." : "Nenhum ticket encontrado."}
                 </p>
+                {isClient && (
+                    <Button asChild>
+                        <Link to="/tickets/new">Novo Ticket</Link>
+                    </Button>
+                )}
             </div>
         );
     }
@@ -44,9 +49,9 @@ export function TicketsPage() {
         <div>
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2x1 font-bold tracking-tight">Tickets</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">Tickets</h1>
                     <p className="text-muted-foreground">
-                        {isClient 
+                        {isClient
                             ? "Acompanhe os chamados que você abriu."
                             : "Gerencie os chamados do sistema."
                         }
@@ -59,7 +64,7 @@ export function TicketsPage() {
                     </Button>
                 )}
             </div>
-            <div className="grip gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {tickets?.map((ticket) => (
                     <TicketCard key={ticket.id} ticket={ticket} />
                 ))}

@@ -67,7 +67,6 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                     <option value="Low">Baixa</option>
                     <option value="MEDIUM">Média</option>
                     <option value="HIGH">Alta</option>
-                    <option value="CRITICAL">Crítica</option>
                 </select>
                 {errors.priority && (
                     <p className="text-sm text-red-500">

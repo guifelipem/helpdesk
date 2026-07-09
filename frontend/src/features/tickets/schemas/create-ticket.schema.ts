@@ -12,7 +12,7 @@ export const createTicketSchema = z.object({
         .max(1000, "A descrição deve ter no máximo 1000 caracteres."),
     
     
-    priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+    priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
 });
 
 export type CreateTicketFormData = z.infer<typeof createTicketSchema>;

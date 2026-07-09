@@ -8,10 +8,9 @@ export type TicketStatus =
 export type TicketPriority =
     | "LOW"
     | "MEDIUM"
-    | "HIGH"
-    | "CRITICAL";
+    | "HIGH";
 
-export type AssignedAgent = {
+export type UserSummary = {
     id: number;
     name: string;
 };
@@ -22,7 +21,8 @@ export type Ticket = {
     description: string;
     status: TicketStatus;
     priority: TicketPriority;
-    assignedTo: AssignedAgent | null;
+    createdBy: UserSummary;
+    assignedTo: UserSummary | null;
     createdAt: string;
     updatedAt: string;
 };

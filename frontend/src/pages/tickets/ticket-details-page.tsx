@@ -1,3 +1,30 @@
+import { useParams } from "react-router-dom";
+
+import { useTicket } from "@/features/tickets/hooks/useTickets";
+import { TicketDetails } from "@/features/tickets/components/ticket-details";
+
 export function TicketDetailsPage() {
-  return <div>Detalhe do ticket</div>;
+    const { id } = useParams();
+
+    const ticketId = Number(id);
+
+    const {
+        data: ticket,
+        isLoading,
+        isError,
+    } = useTicket(ticketId);
+
+    if (isLoading) {
+        return <p>Carregando...</p>
+    }
+
+    if (isError || !ticket) {
+        return <p>Ticket não encontrado.</p>
+    }
+
+    return (
+        <div className="mx-auto max-w-5xl space-y-6 p-6">
+            <TicketDetails ticket={ticket} />
+        </div>
+    );
 }
