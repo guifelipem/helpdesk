@@ -1,6 +1,8 @@
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useMyTickets, useTickets } from "@/features/tickets/hooks/useTickets";
 import { TicketCard } from "@/features/tickets/components/ticket-card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 export function TicketsPage() {
     const user = useAuthStore((state) => state.user);
@@ -40,7 +42,24 @@ export function TicketsPage() {
 
     return (
         <div>
-            <div className="grip gap-4">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2x1 font-bold tracking-tight">Tickets</h1>
+                    <p className="text-muted-foreground">
+                        {isClient 
+                            ? "Acompanhe os chamados que você abriu."
+                            : "Gerencie os chamados do sistema."
+                        }
+                    </p>
+                </div>
+
+                {isClient && (
+                    <Button asChild>
+                        <Link to="/tickets/new">Novo Ticket</Link>
+                    </Button>
+                )}
+            </div>
+            <div className="grip gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {tickets?.map((ticket) => (
                     <TicketCard key={ticket.id} ticket={ticket} />
                 ))}
