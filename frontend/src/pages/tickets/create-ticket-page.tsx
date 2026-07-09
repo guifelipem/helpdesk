@@ -20,7 +20,7 @@ export function CreateTicketPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2x1 font-bold tracking-tight">
+                <h1 className="text-2xl font-bold tracking-tight">
                     Novo Ticket
                 </h1>
                 <p className="text-muted-foreground">

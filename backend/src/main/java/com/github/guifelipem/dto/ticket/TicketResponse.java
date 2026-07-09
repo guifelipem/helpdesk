@@ -12,7 +12,8 @@ public record TicketResponse(
         String description,
         TicketStatus status,
         TicketPriority priority,
-        AssignedAgentResponse assignedTo,
+        UserSummaryResponse createdBy,
+        UserSummaryResponse assignedTo,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}

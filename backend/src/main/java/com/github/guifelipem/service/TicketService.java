@@ -1,7 +1,7 @@
 package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.common.PageResponse;
-import com.github.guifelipem.dto.ticket.AssignedAgentResponse;
+import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
@@ -66,8 +66,13 @@ public class TicketService {
 
     private TicketResponse toResponse(Ticket ticket) {
 
-        AssignedAgentResponse assignedTo = ticket.getAssignedTo() == null ? null
-                : new AssignedAgentResponse(ticket.getAssignedTo().getId(), ticket.getAssignedTo().getName());
+        UserSummaryResponse createdBy = new UserSummaryResponse(
+                ticket.getCreatedBy().getId(),
+                ticket.getCreatedBy().getName()
+        );
+
+        UserSummaryResponse assignedTo = ticket.getAssignedTo() == null ? null
+                : new UserSummaryResponse(ticket.getAssignedTo().getId(), ticket.getAssignedTo().getName());
 
         return new TicketResponse(
                 ticket.getId(),
@@ -75,6 +80,7 @@ public class TicketService {
                 ticket.getDescription(),
                 ticket.getStatus(),
                 ticket.getPriority(),
+                createdBy,
                 assignedTo,
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt()

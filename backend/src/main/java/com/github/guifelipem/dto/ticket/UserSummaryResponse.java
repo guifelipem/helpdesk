@@ -1,6 +1,6 @@
 package com.github.guifelipem.dto.ticket;
 
-public record AssignedAgentResponse(
+public record UserSummaryResponse(
 
         Long id,
         String name

@@ -3,24 +3,12 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Ticket } from "../types/ticket.types";
+import { formatDate } from "@/shared/utils/format-date";
+import { TicketPriorityBadge } from "./ticket-priority-badge";
+import { TicketStatusBadge } from "./ticket-status-badge";
 
 type TicketCardProps = {
     ticket: Ticket;
-};
-
-const statusLabels = {
-    OPEN: "Aberto",
-    IN_PROGRESS: "Em andamento",
-    WAITING_CLIENT: "Aguardando cliente",
-    RESOLVED: "Resolvido",
-    CLOSED: "Fechado",
-};
-
-const priorityLabels = {
-    LOW: "Baixa",
-    MEDIUM: "Média",
-    HIGH: "Alta",
-    CRITICAL: "Crítica",
 };
 
 function truncateText(text: string, maxLength = 120) {
@@ -43,19 +31,15 @@ export function TicketCard({ ticket }: TicketCardProps) {
                     {truncateText(ticket.description)}
                 </p>
 
-                <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                        {statusLabels[ticket.status]}
-                    </span>
+                <div className="flex gap-2">
+                    <TicketStatusBadge status={ticket.status} />
 
-                    <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                        {priorityLabels[ticket.priority]}
-                    </span>
+                    <TicketPriorityBadge priority={ticket.priority} />
                 </div>
 
                 <p className="text-xs text-muted-foreground">
                     Criado em{" "}
-                    {new Date(ticket.createdAt).toLocaleDateString("pt-br")}
+                    {formatDate(ticket.createdAt)}
                 </p>
             </CardContent>
 
