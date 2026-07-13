@@ -2,16 +2,33 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 import { useMyTickets, useTickets } from "@/features/tickets/hooks/use-tickets";
 import { TicketCard } from "@/features/tickets/components/ticket-card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import type { TicketPriority, TicketStatus } from "@/features/tickets/types/ticket.types";
 
 export function TicketsPage() {
     const user = useAuthStore((state) => state.user);
 
     const isClient = user?.role === "CLIENT";
 
-    const allTicketsQuery = useTickets(undefined, {
-        enabled: !isClient,
-    });
+    const [search, setSearch] = useState("");
+    const [status, setStatus] = useState<TicketStatus | "">("");
+    const [priority, setPriority] = useState<TicketPriority | "">("");
+    const [page, setPage] = useState(0);
+
+    const allTicketsQuery = useTickets(
+        {
+            search: search || undefined,
+            status: status || undefined,
+            priority: priority || undefined,
+            page,
+            size: 6,
+        },
+        {
+            enabled: !isClient,
+        },
+    );
 
     const myTicketsQuery = useMyTickets({ enabled: isClient, });
 
@@ -29,18 +46,15 @@ export function TicketsPage() {
         return <p>Erro ao carregar os tickets.</p>;
     }
 
-    if (!tickets || tickets.length === 0) {
+    if (isClient && (!tickets || tickets.length === 0)) {
         return (
             <div>
                 <h1>Tickets</h1>
-                <p>
-                    {isClient ? "Você ainda não possui tickets." : "Nenhum ticket encontrado."}
-                </p>
-                {isClient && (
-                    <Button asChild>
-                        <Link to="/tickets/new">Novo Ticket</Link>
-                    </Button>
-                )}
+                <p>Você ainda não possui tickets.</p>
+
+                <Button asChild>
+                    <Link to="/tickets/new">Novo Ticket</Link>
+                </Button>
             </div>
         );
     }
@@ -64,11 +78,62 @@ export function TicketsPage() {
                     </Button>
                 )}
             </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {tickets?.map((ticket) => (
-                    <TicketCard key={ticket.id} ticket={ticket} />
-                ))}
-            </div>
+
+            {!isClient && (
+                <div className="my-6 grid gap-4 md:grid-cols-3">
+                    <Input
+                        type="search"
+                        placeholder="Buscar por título..."
+                        value={search}
+                        onChange={(event) => {
+                            setSearch(event.target.value);
+                            setPage(0);
+                        }}
+                    />
+
+                    <select
+                        value={status}
+                        onChange={(event) => {
+                            setStatus(event.target.value as TicketStatus | "");
+                            setPage(0);
+                        }}
+                        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                    >
+                        <option value="">Todos os Status</option>
+                        <option value="OPEN">Aberto</option>
+                        <option value="IN_PROGRESS">Em andamento</option>
+                        <option value="WAITING_CLIENT">Aguardando cliente</option>
+                        <option value="RESOLVED">Resolvido</option>
+                        <option value="CLOSED">Fechado</option>
+                    </select>
+
+                    <select
+                        value={priority}
+                        onChange={(event) => {
+                            setPriority(event.target.value as TicketPriority | "");
+                            setPage(0);
+                        }}
+                        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                    >
+                        <option value="">Todas as prioridades</option>
+                        <option value="LOW">Baixa</option>
+                        <option value="MEDIUM">Média</option>
+                        <option value="HIGH">Alta</option>
+                    </select>
+                </div>
+            )}
+
+            {!tickets || tickets.length === 0 ? (
+                <p className="text-muted-foreground">
+                    Nenhum chamado corresponde aos filtros selecionados.
+                </p>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {tickets?.map((ticket) => (
+                        <TicketCard key={ticket.id} ticket={ticket} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
