@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTicketHistory } from "../hooks/use-ticket-history";
 import { formatDate } from "@/shared/utils/format-date";
 

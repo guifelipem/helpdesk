@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@ta
 import { assignTicketToMe, createTicket, findAllTickets, findMyTickets, findTicketById, updateTicketStatus } from "../api/ticket.api";
 import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
 import { ticketQueryKeys } from "../constants/ticket-query-keys";
+import { ticketHistoryQueryKeys } from "@/features/history/constants/ticket-history-query-keys";
 
 import type { PageResponse } from "@/shared/types/page-response";
 import type { Ticket } from "../types/ticket.types";
@@ -64,6 +65,9 @@ export function useAssignTickets() {
             queryClient.invalidateQueries({
                 queryKey: ticketQueryKeys.detail(ticket.id),
             });
+            queryClient.invalidateQueries({
+                queryKey: ticketHistoryQueryKeys.history(ticket.id),
+            });
         },
     });
 }
@@ -81,6 +85,9 @@ export function useUpdateTicketStatus() {
 
             queryClient.invalidateQueries({
                 queryKey: ticketQueryKeys.detail(ticket.id),
+            });
+            queryClient.invalidateQueries({
+                queryKey: ticketHistoryQueryKeys.history(ticket.id),
             });
         },
     });
