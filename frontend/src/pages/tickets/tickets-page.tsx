@@ -38,6 +38,8 @@ export function TicketsPage() {
 
     const tickets = isClient ? myTicketsQuery.data : allTicketsQuery.data?.content;
 
+    const pageData = allTicketsQuery.data;
+
     if (isPending) {
         return <p>Carregando...</p>;
     }
@@ -123,6 +125,14 @@ export function TicketsPage() {
                 </div>
             )}
 
+            {!isClient && pageData && (
+                <p className="mb-4 text-sm text-muted-foreground">
+                    {pageData.totalElements} chamado
+                    {pageData.totalElements === 1 ? "" : "s"} encontrado
+                    {pageData.totalElements === 1 ? "" : "s"}.
+                </p>
+            )}
+
             {!tickets || tickets.length === 0 ? (
                 <p className="text-muted-foreground">
                     Nenhum chamado corresponde aos filtros selecionados.
@@ -132,6 +142,30 @@ export function TicketsPage() {
                     {tickets?.map((ticket) => (
                         <TicketCard key={ticket.id} ticket={ticket} />
                     ))}
+                </div>
+            )}
+
+            {!isClient && pageData && pageData.totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between">
+                    <Button
+                        variant="outline"
+                        disabled={page === 0 || allTicketsQuery.isFetching}
+                        onClick={() => setPage((currentPage) => currentPage - 1)}
+                    >
+                        Anterior
+                    </Button>
+
+                    <span className="text-sm text-muted-foreground">
+                        Página { pageData.page + 1} de {pageData.totalPages}
+                    </span>
+
+                    <Button
+                        variant="outline"
+                        disabled={page >= pageData.totalPages - 1 || allTicketsQuery.isFetching}
+                        onClick={() => setPage((currentPage) => currentPage + 1)}
+                    >
+                        Próxima
+                    </Button>
                 </div>
             )}
         </div>
