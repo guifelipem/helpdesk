@@ -7,6 +7,7 @@ import { TicketPriorityBadge } from "./ticket-priority-badge";
 import { TicketStatusBadge } from "./ticket-status-badge";
 import { CommentSection } from "@/features/comments/components/comment-section";
 import { TicketHistorySection } from "@/features/history/components/ticket-history-section";
+import { TicketActions } from "./ticket-actions";
 
 type TicketDetailsProps = { ticket: Ticket; };
 
@@ -47,8 +48,8 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                     </div>
                 </CardHeader>
 
-                <CardContent>
-                    <div>
+                <CardContent className="space-y-6">
+                    <div className="grid gap-4 sm:grid-cols-2">
                         <InfoItem label="Criado por" value={ticket.createdBy.name} />
 
                         <InfoItem
@@ -60,6 +61,8 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
 
                         <InfoItem label="Atualizado em" value={formatDate(ticket.updatedAt)} />
                     </div>
+
+                    <TicketActions ticket={ticket} />
                 </CardContent>
             </Card>
 
