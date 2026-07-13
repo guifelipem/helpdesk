@@ -11,8 +11,8 @@ export function CreateTicketPage() {
 
     function handleCreateTicket(data: CreateTicketFormData) {
         createTicketMutation.mutate(data, {
-            onSuccess: () => {
-                navigate("/tickets");
+            onSuccess: (ticket) => {
+                navigate(`/tickets/${ticket.id}`);
             },
         });
     }
@@ -34,6 +34,12 @@ export function CreateTicketPage() {
                         onSubmit={handleCreateTicket}
                         isSubmitting={createTicketMutation.isPending}
                     />
+
+                    {createTicketMutation.isError && (
+                        <p className="mt-4 text-sm text-red-500">
+                            Não foi possível criar o chamado. Tente novamente.
+                        </p>
+                    )}
                 </CardContent>
             </Card>
 
