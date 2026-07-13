@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 import { createTicketSchema, type CreateTicketFormData } from "../schemas/create-ticket.schema";
 
@@ -44,10 +45,10 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
 
             <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
-                <textarea 
+                <Textarea 
                     id="description"
                     placeholder="Descreva o problema com o máximo de detalhes possível."
-                    className="min-h-32 w-full rounded-md border border-input bg-transparent"
+                    className="min-h-32"
                     {...register("description")}
                 />
                 {errors.description && (
@@ -64,7 +65,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                     className="h-9 w-full rounded-md border border-input bg-transparent px-3"
                     {...register("priority")}
                 >
-                    <option value="Low">Baixa</option>
+                    <option value="LOW">Baixa</option>
                     <option value="MEDIUM">Média</option>
                     <option value="HIGH">Alta</option>
                 </select>
