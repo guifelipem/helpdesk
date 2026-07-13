@@ -6,6 +6,7 @@ import type { Ticket } from "../types/ticket.types";
 import { TicketPriorityBadge } from "./ticket-priority-badge";
 import { TicketStatusBadge } from "./ticket-status-badge";
 import { CommentSection } from "@/features/comments/components/comment-section";
+import { TicketHistorySection } from "@/features/history/components/ticket-history-section";
 
 type TicketDetailsProps = { ticket: Ticket; };
 
@@ -76,17 +77,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
 
             <CommentSection ticketId={ticket.id} />
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Histórico</CardTitle>
-                </CardHeader>
-
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Histórico de alterações será exibido aqui.
-                    </p>
-                </CardContent>
-            </Card>
+            <TicketHistorySection ticketId={ticket.id} />
         </div>
     )
 }

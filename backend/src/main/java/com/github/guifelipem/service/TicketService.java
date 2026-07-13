@@ -145,6 +145,8 @@ public class TicketService {
             throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
         }
 
+        TicketStatus currentStatus = ticket.getStatus();
+
         User agent = authenticatedUserProvider.getAuthenticatedUser();
 
         ticket.setAssignedTo(agent);
@@ -153,6 +155,7 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
+        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), ticket.getStatus().name(), agent);
         createHistory(savedTicket, "TICKET_ASSIGNED", null, agent.getName(), agent);
 
         return toResponse(savedTicket);

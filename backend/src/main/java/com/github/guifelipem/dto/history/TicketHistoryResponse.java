@@ -1,5 +1,7 @@
 package com.github.guifelipem.dto.history;
 
+import com.github.guifelipem.dto.ticket.UserSummaryResponse;
+
 import java.time.LocalDateTime;
 
 public record TicketHistoryResponse(
@@ -8,7 +10,6 @@ public record TicketHistoryResponse(
         String action,
         String oldValue,
         String newValue,
-        Long performedById,
-        String performedByName,
+        UserSummaryResponse performedBy,
         LocalDateTime createdAt
 ) {}
