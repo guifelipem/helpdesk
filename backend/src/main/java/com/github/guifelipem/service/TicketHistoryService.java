@@ -1,6 +1,7 @@
 package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.history.TicketHistoryResponse;
+import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
@@ -43,13 +44,17 @@ public class TicketHistoryService {
 
     private TicketHistoryResponse toResponse(TicketHistory history) {
 
+        UserSummaryResponse performedBy = new UserSummaryResponse(
+                history.getPerformedBy().getId(),
+                history.getPerformedBy().getName()
+        );
+
         return new TicketHistoryResponse(
                 history.getId(),
                 history.getAction(),
                 history.getOldValue(),
                 history.getNewValue(),
-                history.getPerformedBy().getId(),
-                history.getPerformedBy().getName(),
+                performedBy,
                 history.getCreatedAt()
         );
     }

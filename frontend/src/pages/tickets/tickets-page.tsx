@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/features/auth/store/auth.store";
-import { useMyTickets, useTickets } from "@/features/tickets/hooks/useTickets";
+import { useMyTickets, useTickets } from "@/features/tickets/hooks/use-tickets";
 import { TicketCard } from "@/features/tickets/components/ticket-card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";

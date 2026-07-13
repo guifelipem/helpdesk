@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TicketForm } from "@/features/tickets/components/ticket-form";
-import { useCreateTicket } from "@/features/tickets/hooks/useTickets";
+import { useCreateTicket } from "@/features/tickets/hooks/use-tickets";
 import type { CreateTicketFormData } from "@/features/tickets/schemas/create-ticket.schema";
 import { Link, useNavigate } from "react-router-dom";
 

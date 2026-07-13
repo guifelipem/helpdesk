@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 
-import { useTicket } from "@/features/tickets/hooks/useTickets";
+import { useTicket } from "@/features/tickets/hooks/use-tickets";
 import { TicketDetails } from "@/features/tickets/components/ticket-details";
 
 export function TicketDetailsPage() {
