@@ -40,6 +40,15 @@ export function TicketsPage() {
 
     const pageData = allTicketsQuery.data;
 
+    const hasActiveFilters = search !== "" || status !== "" || priority !== "";
+
+    function handleClearFilters() {
+        setSearch("");
+        setStatus("");
+        setPriority("");
+        setPage(0);
+    }
+
     if (isPending) {
         return <p>Carregando...</p>;
     }
@@ -82,7 +91,7 @@ export function TicketsPage() {
             </div>
 
             {!isClient && (
-                <div className="my-6 grid gap-4 md:grid-cols-3">
+                <div className="my-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <Input
                         type="search"
                         placeholder="Buscar por título..."
@@ -122,6 +131,15 @@ export function TicketsPage() {
                         <option value="MEDIUM">Média</option>
                         <option value="HIGH">Alta</option>
                     </select>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClearFilters}
+                        disabled={!hasActiveFilters}
+                    >
+                        Limpar filtros
+                    </Button>
                 </div>
             )}
 
