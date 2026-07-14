@@ -6,6 +6,7 @@ import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.entity.Comment;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
+import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.repository.CommentRepository;
@@ -40,6 +41,10 @@ public class CommentService {
 
         if (isClient && !isOwner) {
             throw new ForbiddenException("Você não tem acesso a este chamado");
+        }
+
+        if (ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new ForbiddenException("Não é possível comentar em um chamado encerrado");
         }
 
         if (Boolean.TRUE.equals(request.isInternal()) && isClient) {
