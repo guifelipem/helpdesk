@@ -6,5 +6,5 @@ export type FindAllTicketsParams = {
     search?: string;
     page?: number;
     size?: number;
-    sort?: number;
+    sort?: string;
 };

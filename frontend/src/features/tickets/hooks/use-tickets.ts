@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 
 import { assignTicketToMe, createTicket, findAllTickets, findMyTickets, findTicketById, updateTicketStatus } from "../api/ticket.api";
 import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
@@ -15,6 +16,7 @@ export function useTickets(
     return useQuery({
         queryKey: ticketQueryKeys.list(params),
         queryFn: () => findAllTickets(params),
+        placeholderData: keepPreviousData,
         ...options,
     });
 }
