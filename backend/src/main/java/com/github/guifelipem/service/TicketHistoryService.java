@@ -46,7 +46,8 @@ public class TicketHistoryService {
 
         UserSummaryResponse performedBy = new UserSummaryResponse(
                 history.getPerformedBy().getId(),
-                history.getPerformedBy().getName()
+                history.getPerformedBy().getName(),
+                history.getPerformedBy().getRole()
         );
 
         return new TicketHistoryResponse(

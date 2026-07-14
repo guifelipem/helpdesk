@@ -91,7 +91,8 @@ public class CommentService {
 
         UserSummaryResponse author = new UserSummaryResponse(
                 comment.getUser().getId(),
-                comment.getUser().getName()
+                comment.getUser().getName(),
+                comment.getUser().getRole()
         );
 
         return new CommentResponse(
