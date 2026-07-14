@@ -43,8 +43,6 @@ export function TicketsPage() {
 
     const refetch = isClient ? myTicketsQuery.refetch : allTicketsQuery.refetch;
 
-    const isFetching = isClient ? myTicketsQuery.isFetching : allTicketsQuery.isFetching;
-
     const pageData = allTicketsQuery.data;
 
     const hasActiveFilters = search !== "" || status !== "" || priority !== "";

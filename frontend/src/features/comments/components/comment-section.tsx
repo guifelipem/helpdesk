@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useComments, useCreateComment } from "../hooks/use-comments";
-import { formatDate } from "@/shared/utils/format-date";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { Label } from "@/components/ui/label";
 

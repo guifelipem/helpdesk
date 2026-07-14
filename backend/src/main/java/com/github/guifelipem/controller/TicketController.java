@@ -54,6 +54,13 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.updateStatus(id, request));
     }
 
+    @PreAuthorize("hasRole('CLIENT')")
+    @PatchMapping("/{id}/close")
+    public ResponseEntity<TicketResponse> closeTicket(@PathVariable Long id) {
+
+        return ResponseEntity.ok(ticketService.closeTicket(id));
+    }
+
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @PatchMapping("/{id}/assign/me")
     public ResponseEntity<TicketResponse> assignToMe(@PathVariable Long id) {

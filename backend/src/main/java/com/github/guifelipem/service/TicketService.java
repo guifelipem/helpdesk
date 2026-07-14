@@ -114,6 +114,10 @@ public class TicketService {
         TicketStatus currentStatus = ticket.getStatus();
         TicketStatus newStatus = request.status();
 
+        if (newStatus == TicketStatus.CLOSED) {
+            throw new ForbiddenException("O fechamento do chamado deve ser confirmado pelo cliente");
+        }
+
         if (!currentStatus.canTransitionTo(newStatus)) {
 
             throw new InvalidTicketStatusTransitionException(
@@ -127,6 +131,34 @@ public class TicketService {
         Ticket savedTicket = ticketRepository.save(ticket);
 
         createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), request.status().name(), user);
+
+        return toResponse(savedTicket);
+    }
+
+    @Transactional
+    public TicketResponse closeTicket(Long ticketId) {
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
+
+        User user = authenticatedUserProvider.getAuthenticatedUser();
+
+        if (!ticket.getCreatedBy().getId().equals(user.getId())) {
+            throw new ForbiddenException("Você não tem permissão para fechar este chamado");
+        }
+
+        if (ticket.getStatus() != TicketStatus.RESOLVED) {
+            throw new InvalidTicketStatusTransitionException("Apenas chamados resolvidos podem ser fechados");
+        }
+
+        TicketStatus currentStatus = ticket.getStatus();
+
+        ticket.setStatus(TicketStatus.CLOSED);
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), TicketStatus.CLOSED.name(), user);
 
         return toResponse(savedTicket);
     }
