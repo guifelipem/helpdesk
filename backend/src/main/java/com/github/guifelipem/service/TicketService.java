@@ -69,11 +69,16 @@ public class TicketService {
 
         UserSummaryResponse createdBy = new UserSummaryResponse(
                 ticket.getCreatedBy().getId(),
-                ticket.getCreatedBy().getName()
+                ticket.getCreatedBy().getName(),
+                ticket.getCreatedBy().getRole()
         );
 
         UserSummaryResponse assignedTo = ticket.getAssignedTo() == null ? null
-                : new UserSummaryResponse(ticket.getAssignedTo().getId(), ticket.getAssignedTo().getName());
+                : new UserSummaryResponse(
+                        ticket.getAssignedTo().getId(),
+                        ticket.getAssignedTo().getName(),
+                        ticket.getAssignedTo().getRole()
+                );
 
         return new TicketResponse(
                 ticket.getId(),

@@ -1,8 +1,10 @@
 package com.github.guifelipem.dto.ticket;
 
-public record UserSummaryResponse(
+import com.github.guifelipem.enums.UserRole;
 
+public record UserSummaryResponse(
         Long id,
-        String name
+        String name,
+        UserRole role
 ) {
 }
