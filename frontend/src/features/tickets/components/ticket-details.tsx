@@ -78,7 +78,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 </CardContent>
             </Card>
 
-            <CommentSection ticketId={ticket.id} />
+            <CommentSection ticketId={ticket.id} ticketStatus={ticket.status}/>
 
             <TicketHistorySection ticketId={ticket.id} />
         </div>

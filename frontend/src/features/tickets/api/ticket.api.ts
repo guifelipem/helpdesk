@@ -32,6 +32,11 @@ export async function updateTicketStatus({
         return response.data;
 }
 
+export async function closeTicket(id: number) {
+        const response = await api.patch<Ticket>(`/tickets/${id}/close`);
+        return response.data;
+}
+
 export async function assignTicketToMe(id: number) {
         const response = await api.patch<Ticket>(`/tickets/${id}/assign/me`);
         return response.data;
@@ -41,6 +46,6 @@ export async function findAllTickets(params?: FindAllTicketsParams) {
         const response = await api.get<PageResponse<Ticket>>("/tickets", {
                 params,
         });
-
         return response.data;
 }
+

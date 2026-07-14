@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 
-import { useAssignTickets, useUpdateTicketStatus } from "../hooks/use-tickets";
+import { useAssignTickets, useUpdateTicketStatus, useCloseTicket } from "../hooks/use-tickets";
 import type { Ticket, TicketStatus } from "../types/ticket.types";
 
 type TicketActionsProps = { ticket: Ticket; };
@@ -11,8 +11,26 @@ export function TicketActions({ ticket }: TicketActionsProps) {
 
     const assignTicket = useAssignTickets();
     const updateStatus = useUpdateTicketStatus();
+    const closeTicket = useCloseTicket();
 
+    const isClient = user?.role === "CLIENT";
     const canManageTicket = user?.role === "AGENT" || user?.role === "ADMIN";
+
+    const isTicketOwner = user?.id === ticket.createdBy.id;
+
+    if (isClient) {
+        if (ticket.status !== "RESOLVED" || !isTicketOwner) {
+            return null;
+        }
+
+        return (
+            <div>
+                <Button onClick={handleClose} disabled={closeTicket.isPending}>
+                    {closeTicket.isPending ? "Fechando..." : "Confirmar resolução"}
+                </Button>
+            </div>
+        );
+    }
 
     if (!canManageTicket) {
         return null;
@@ -29,7 +47,11 @@ export function TicketActions({ ticket }: TicketActionsProps) {
         });
     }
 
-    const isPending = assignTicket.isPending || updateStatus.isPending;
+    function handleClose() {
+        closeTicket.mutate(ticket.id);
+    }
+
+    const isPending = assignTicket.isPending || updateStatus.isPending || closeTicket.isPending;
 
     return(
         <div className="flex flex-wrap gap-2">
@@ -75,15 +97,6 @@ export function TicketActions({ ticket }: TicketActionsProps) {
                         Marcar como Resolvido
                     </Button>
                 </>
-            )}
-
-            {ticket.status === "RESOLVED" && (
-                <Button
-                    onClick={() => handleStatusChange("CLOSED")}
-                    disabled={isPending}
-                >
-                    {updateStatus.isPending ? "Fechando..." : "Fechar chamado"}
-                </Button>
             )}
         </div>
     )
