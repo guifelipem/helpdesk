@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import type { TicketPriority, TicketStatus } from "@/features/tickets/types/ticket.types";
+import { TicketListSkeleton } from "@/features/tickets/components/ticket-card-skeleton";
 
 export function TicketsPage() {
     const user = useAuthStore((state) => state.user);
@@ -49,15 +50,11 @@ export function TicketsPage() {
         setPage(0);
     }
 
-    if (isPending) {
-        return <p>Carregando...</p>;
-    }
-
     if (isError) {
         return <p>Erro ao carregar os tickets.</p>;
     }
 
-    if (isClient && (!tickets || tickets.length === 0)) {
+    if (!isPending && isClient && (!tickets || tickets.length === 0)) {
         return (
             <div>
                 <h1>Tickets</h1>
@@ -151,8 +148,10 @@ export function TicketsPage() {
                 </p>
             )}
 
-            {!tickets || tickets.length === 0 ? (
-                <p className="text-muted-foreground">
+            {isPending ? (
+                <TicketListSkeleton />
+            ) : !tickets || tickets.length === 0 ? (
+                <p>
                     Nenhum chamado corresponde aos filtros selecionados.
                 </p>
             ) : (
@@ -174,7 +173,7 @@ export function TicketsPage() {
                     </Button>
 
                     <span className="text-sm text-muted-foreground">
-                        Página { pageData.page + 1} de {pageData.totalPages}
+                        Página {pageData.page + 1} de {pageData.totalPages}
                     </span>
 
                     <Button
