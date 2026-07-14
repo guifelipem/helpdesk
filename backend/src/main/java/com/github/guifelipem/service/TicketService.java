@@ -8,6 +8,7 @@ import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
+import com.github.guifelipem.enums.TicketHistoryAction;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
@@ -51,7 +52,7 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "TICKET_CREATED", null, savedTicket.getStatus().name(), user);
+        createHistory(savedTicket, TicketHistoryAction.TICKET_CREATED, null, savedTicket.getStatus().name(), user);
 
         return toResponse(savedTicket);
     }
@@ -130,7 +131,7 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), request.status().name(), user);
+        createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED, currentStatus.name(), request.status().name(), user);
 
         return toResponse(savedTicket);
     }
@@ -158,7 +159,7 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), TicketStatus.CLOSED.name(), user);
+        createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED, currentStatus.name(), TicketStatus.CLOSED.name(), user);
 
         return toResponse(savedTicket);
     }
@@ -187,8 +188,8 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), ticket.getStatus().name(), agent);
-        createHistory(savedTicket, "TICKET_ASSIGNED", null, agent.getName(), agent);
+        createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED, currentStatus.name(), ticket.getStatus().name(), agent);
+        createHistory(savedTicket, TicketHistoryAction.TICKET_ASSIGNED, null, agent.getName(), agent);
 
         return toResponse(savedTicket);
     }
@@ -215,7 +216,7 @@ public class TicketService {
         );
     }
 
-    private void createHistory(Ticket ticket, String action, String oldValue, String newValue, User performedBy) {
+    private void createHistory(Ticket ticket, TicketHistoryAction action, String oldValue, String newValue, User performedBy) {
 
         TicketHistory history = TicketHistory.builder()
                 .ticket(ticket)

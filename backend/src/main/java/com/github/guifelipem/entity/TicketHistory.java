@@ -1,5 +1,6 @@
 package com.github.guifelipem.entity;
 
+import com.github.guifelipem.enums.TicketHistoryAction;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,8 +19,9 @@ public class TicketHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String action;
+    private TicketHistoryAction action;
 
     @Column(name = "old_value")
     private String oldValue;
