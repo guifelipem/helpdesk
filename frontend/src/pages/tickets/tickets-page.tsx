@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import type { TicketPriority, TicketStatus } from "@/features/tickets/types/ticket.types";
 import { TicketListSkeleton } from "@/features/tickets/components/ticket-card-skeleton";
+import { ErrorState } from "@/shared/components/error-state";
 
 export function TicketsPage() {
     const user = useAuthStore((state) => state.user);
@@ -17,6 +18,7 @@ export function TicketsPage() {
     const [status, setStatus] = useState<TicketStatus | "">("");
     const [priority, setPriority] = useState<TicketPriority | "">("");
     const [page, setPage] = useState(0);
+    const [isRetrying, setIsRetrying] = useState(false);
 
     const allTicketsQuery = useTickets(
         {
@@ -39,6 +41,10 @@ export function TicketsPage() {
 
     const tickets = isClient ? myTicketsQuery.data : allTicketsQuery.data?.content;
 
+    const refetch = isClient ? myTicketsQuery.refetch : allTicketsQuery.refetch;
+
+    const isFetching = isClient ? myTicketsQuery.isFetching : allTicketsQuery.isFetching;
+
     const pageData = allTicketsQuery.data;
 
     const hasActiveFilters = search !== "" || status !== "" || priority !== "";
@@ -50,8 +56,23 @@ export function TicketsPage() {
         setPage(0);
     }
 
-    if (isError) {
-        return <p>Erro ao carregar os tickets.</p>;
+    async function handleRetry() {
+        setIsRetrying(true);
+
+        await refetch();
+
+        setIsRetrying(false);
+    }
+
+    if (isError || isRetrying) {
+        return (
+            <ErrorState
+                title="Não foi possível carregar os chamados"
+                description="Tivemos um problema ao buscar os chamados. Verifique se o servidor está disponível e tente novamente."
+                onRetry={handleRetry}
+                isRetrying={isRetrying}
+            />
+        );
     }
 
     if (!isPending && isClient && (!tickets || tickets.length === 0)) {
