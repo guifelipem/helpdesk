@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 import { getMe } from "../api/auth.api";
 import { useAuthStore } from "../store/auth.store";
@@ -17,7 +18,10 @@ export function useAuthMe() {
                 setUser(user);
                 return user;
             } catch (error) {
-                logout();
+                if (axios.isAxiosError(error) && error.response?.status === 401) {
+                    logout();
+                }
+
                 throw error;
             }
         },
