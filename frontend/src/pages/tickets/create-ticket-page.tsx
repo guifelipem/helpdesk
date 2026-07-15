@@ -4,6 +4,7 @@ import { TicketForm } from "@/features/tickets/components/ticket-form";
 import { useCreateTicket } from "@/features/tickets/hooks/use-tickets";
 import type { CreateTicketFormData } from "@/features/tickets/schemas/create-ticket.schema";
 import { Link, useNavigate } from "react-router-dom";
+import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 
 export function CreateTicketPage() {
     const navigate = useNavigate();
@@ -16,6 +17,11 @@ export function CreateTicketPage() {
             },
         });
     }
+
+    const errorMessage = getApiErrorMessage(
+        createTicketMutation.error,
+        "Não foi possível criar o chamado. Tente novamente."
+    );
 
     return (
         <div className="space-y-6">
@@ -30,14 +36,14 @@ export function CreateTicketPage() {
 
             <Card>
                 <CardContent>
-                    <TicketForm 
+                    <TicketForm
                         onSubmit={handleCreateTicket}
                         isSubmitting={createTicketMutation.isPending}
                     />
 
                     {createTicketMutation.isError && (
-                        <p className="mt-4 text-sm text-red-500">
-                            Não foi possível criar o chamado. Tente novamente.
+                        <p className="mt-4 text-sm text-destructive">
+                            {errorMessage}
                         </p>
                     )}
                 </CardContent>
