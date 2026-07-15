@@ -1,10 +1,13 @@
 package com.github.guifelipem.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.guifelipem.exception.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsServiceImp userDetailsService;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -54,10 +59,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (Exception ex) {
-            SecurityContextHolder.clearContext();
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            ErrorResponse error = new ErrorResponse(
+                    LocalDateTime.now(),
+                    HttpStatus.UNAUTHORIZED.value(),
+                    "Token inválido ou expirado"
+            );
+
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType("application/json");
-            response.getWriter().write("{\"message\":\"Token inválido ou expirado\"}");
+            response.setCharacterEncoding("UTF-8");
+
+            objectMapper.writeValue(response.getWriter(), error);
         }
 
     }
