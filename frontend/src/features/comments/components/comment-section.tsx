@@ -1,8 +1,10 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDate } from "@/shared/utils/format-date";
 import { useComments, useCreateComment } from "../hooks/use-comments";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { Label } from "@/components/ui/label";
@@ -97,27 +99,50 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                     </p>
                 ) : (
                     <div className="space-y-3">
-                        {comments.map((comment) => (
-                            <div
-                                key={comment.id}
-                                className={`rounded-lg border p-3 ${comment.isInternal ? "border-amber-300 bg-amber-50" : ""
-                                    }`}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <strong>{comment.author.name}</strong>
+                        {comments.map((comment) => {
+                            const isSupport = comment.author.role === "AGENT" || comment.author.role === "ADMIN";
 
-                                    {comment.isInternal && (
-                                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                                            Interno
+                            return (
+                                <div
+                                    key={comment.id}
+                                    className={`rounded-lg border p-3 ${comment.isInternal
+                                        ? "border-amber-300 bg-amber-50"
+                                        : isSupport
+                                            ? "bg-muted/40"
+                                            : "bg-background"
+                                        }`}
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <strong className="text-sm">
+                                                {comment.author.name}
+                                            </strong>
+
+                                            <Badge variant={isSupport ? "default" : "secondary"}>
+                                                {isSupport ? "Equipe" : "Cliente"}
+                                            </Badge>
+
+                                            {comment.isInternal && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="border-amber-300 bg-amber-100 text-amber-800"
+                                                >
+                                                    Interno
+                                                </Badge>
+                                            )}
+                                        </div>
+
+                                        <span className="shrink-0 text-xs text-muted-foreground">
+                                            {formatDate(comment.createdAt)}
                                         </span>
-                                    )}
-                                </div>
+                                    </div>
 
-                                <p className="mt-2 text-sm">
-                                    {comment.message}
-                                </p>
-                            </div>
-                        ))}
+                                    <p className="mt-2 text-sm">
+                                        {comment.message}
+                                    </p>
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
             </CardContent>
