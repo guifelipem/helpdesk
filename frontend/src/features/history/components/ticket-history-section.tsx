@@ -1,7 +1,7 @@
 import { useTicketHistory } from "../hooks/use-ticket-history";
 import { formatDate } from "@/shared/utils/format-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CircleCheck, History } from "lucide-react";
+import { History } from "lucide-react";
 import { getHistoryDescription, getHistoryTitle, getHistoryIcon } from "../utils/format-ticket-history";
 import { Button } from "@/components/ui/button";
 
