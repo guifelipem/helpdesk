@@ -1,12 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
 import { login, getMe } from "@/features/auth/api/auth.api";
 import { loginSchema, type LoginFormData } from "@/features/auth/schemas/login.schema";
 import { useAuthStore } from "@/features/auth/store/auth.store";
+import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,10 +48,10 @@ export function LoginPage() {
     loginMutation.mutate(data);
   }
 
-  const errorMessage =
-    loginMutation.error instanceof AxiosError
-      ? loginMutation.error.response?.data?.message ?? "Erro ao fazer login"
-      : "Erro ao fazer login";
+  const errorMessage = getApiErrorMessage(
+    loginMutation.error,
+    "Não foi possível realizar o login. Tente novamente."
+  )
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">

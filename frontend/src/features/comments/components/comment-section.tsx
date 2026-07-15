@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/shared/utils/format-date";
+import { ErrorState } from "@/shared/components/error-state";
+import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 import { useComments, useCreateComment } from "../hooks/use-comments";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { Label } from "@/components/ui/label";
@@ -26,8 +28,18 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
 
     const isTicketClosed = ticketStatus === "CLOSED";
 
-    const { data: comments = [], isLoading } = useComments(ticketId);
+    const { data: comments = [], isLoading, isError, error, refetch, isFetching, } = useComments(ticketId);
     const createCommentMutation = useCreateComment(ticketId);
+
+    const commentsErrorMessage = getApiErrorMessage(
+        error,
+        "Não foi possível carregar os comentários. Tente novamente"
+    );
+
+    const createCommentErrorMessage = getApiErrorMessage(
+        createCommentMutation.error,
+        "Não foi possível enviar o comentário. Tente novamente."
+    );
 
     function handleCreateComment() {
         if (!message.trim()) return;
@@ -88,11 +100,26 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                         >
                             {createCommentMutation.isPending ? "Enviando..." : "Enviar comentário"}
                         </Button>
+
+                        {createCommentMutation.error && (
+                            <p className="text-sm text-destructive">
+                                {createCommentErrorMessage}
+                            </p>
+                        )}
                     </div>
                 )}
 
                 {isLoading ? (
-                    <p>Carregando comentários...</p>
+                    <p className="text-sm text-muted-foreground">
+                        Carregando comentários...
+                    </p>
+                ) : isError ? (
+                    <ErrorState
+                        title="Não foi possível carregar os comentários"
+                        description={commentsErrorMessage}
+                        onRetry={() => refetch()}
+                        isRetrying={isFetching}
+                    />
                 ) : comments.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                         Nenhum comentário ainda.
