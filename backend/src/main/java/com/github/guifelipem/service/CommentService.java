@@ -2,16 +2,18 @@ package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.comment.CommentResponse;
 import com.github.guifelipem.dto.comment.CreateCommentRequest;
+import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.entity.Comment;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
+import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.repository.CommentRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
+import com.github.guifelipem.exception.ForbiddenException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,11 +40,15 @@ public class CommentService {
         boolean isOwner = ticket.getCreatedBy().getId().equals(user.getId());
 
         if (isClient && !isOwner) {
-            throw new AccessDeniedException("Você não tem acesso a este chamado");
+            throw new ForbiddenException("Você não tem acesso a este chamado");
+        }
+
+        if (ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new ForbiddenException("Não é possível comentar em um chamado encerrado");
         }
 
         if (Boolean.TRUE.equals(request.isInternal()) && isClient) {
-            throw new AccessDeniedException("Cliente não pode criar comentário interno");
+            throw new ForbiddenException("Cliente não pode criar comentário interno");
         }
 
         Comment comment = Comment.builder()
@@ -72,7 +78,7 @@ public class CommentService {
         boolean isOwner = ticket.getCreatedBy().getId().equals(user.getId());
 
         if (isClient && !isOwner) {
-            throw new AccessDeniedException("Você não tem acesso a este chamado");
+            throw new ForbiddenException("Você não tem acesso a este chamado");
         }
 
         return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
@@ -83,12 +89,17 @@ public class CommentService {
 
     private CommentResponse toResponse(Comment comment) {
 
+        UserSummaryResponse author = new UserSummaryResponse(
+                comment.getUser().getId(),
+                comment.getUser().getName(),
+                comment.getUser().getRole()
+        );
+
         return new CommentResponse(
                 comment.getId(),
                 comment.getMessage(),
                 comment.getIsInternal(),
-                comment.getUser().getId(),
-                comment.getUser().getName(),
+                author,
                 comment.getCreatedAt()
         );
     }

@@ -1,9 +1,6 @@
 package com.github.guifelipem.service;
 
-import com.github.guifelipem.dto.auth.LoginRequest;
-import com.github.guifelipem.dto.auth.LoginResponse;
-import com.github.guifelipem.dto.auth.RegisterRequest;
-import com.github.guifelipem.dto.auth.RegisterResponse;
+import com.github.guifelipem.dto.auth.*;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.EmailAlreadyExistsException;
@@ -11,6 +8,7 @@ import com.github.guifelipem.exception.InvalidCredentialsException;
 import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -65,5 +63,17 @@ public class AuthService {
         String token = jwtService.generateToken(user.getEmail());
 
         return new LoginResponse(token);
+    }
+
+    public MeResponse me(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
+
+        return new MeResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole()
+        );
     }
 }

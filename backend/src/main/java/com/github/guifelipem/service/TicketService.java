@@ -1,13 +1,14 @@
 package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.common.PageResponse;
-import com.github.guifelipem.dto.ticket.AssignedAgentResponse;
+import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
+import com.github.guifelipem.enums.TicketHistoryAction;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
@@ -51,7 +52,7 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "TICKET_CREATED", null, savedTicket.getStatus().name(), user);
+        createHistory(savedTicket, TicketHistoryAction.TICKET_CREATED, null, savedTicket.getStatus().name(), user);
 
         return toResponse(savedTicket);
     }
@@ -66,8 +67,18 @@ public class TicketService {
 
     private TicketResponse toResponse(Ticket ticket) {
 
-        AssignedAgentResponse assignedTo = ticket.getAssignedTo() == null ? null
-                : new AssignedAgentResponse(ticket.getAssignedTo().getId(), ticket.getAssignedTo().getName());
+        UserSummaryResponse createdBy = new UserSummaryResponse(
+                ticket.getCreatedBy().getId(),
+                ticket.getCreatedBy().getName(),
+                ticket.getCreatedBy().getRole()
+        );
+
+        UserSummaryResponse assignedTo = ticket.getAssignedTo() == null ? null
+                : new UserSummaryResponse(
+                        ticket.getAssignedTo().getId(),
+                        ticket.getAssignedTo().getName(),
+                        ticket.getAssignedTo().getRole()
+                );
 
         return new TicketResponse(
                 ticket.getId(),
@@ -75,6 +86,7 @@ public class TicketService {
                 ticket.getDescription(),
                 ticket.getStatus(),
                 ticket.getPriority(),
+                createdBy,
                 assignedTo,
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt()
@@ -108,6 +120,10 @@ public class TicketService {
         TicketStatus currentStatus = ticket.getStatus();
         TicketStatus newStatus = request.status();
 
+        if (newStatus == TicketStatus.CLOSED) {
+            throw new ForbiddenException("O fechamento do chamado deve ser confirmado pelo cliente");
+        }
+
         if (!currentStatus.canTransitionTo(newStatus)) {
 
             throw new InvalidTicketStatusTransitionException(
@@ -120,7 +136,35 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "STATUS_CHANGED", currentStatus.name(), request.status().name(), user);
+        createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED, currentStatus.name(), request.status().name(), user);
+
+        return toResponse(savedTicket);
+    }
+
+    @Transactional
+    public TicketResponse closeTicket(Long ticketId) {
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
+
+        User user = authenticatedUserProvider.getAuthenticatedUser();
+
+        if (!ticket.getCreatedBy().getId().equals(user.getId())) {
+            throw new ForbiddenException("Você não tem permissão para fechar este chamado");
+        }
+
+        if (ticket.getStatus() != TicketStatus.RESOLVED) {
+            throw new InvalidTicketStatusTransitionException("Apenas chamados resolvidos podem ser fechados");
+        }
+
+        TicketStatus currentStatus = ticket.getStatus();
+
+        ticket.setStatus(TicketStatus.CLOSED);
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED, currentStatus.name(), TicketStatus.CLOSED.name(), user);
 
         return toResponse(savedTicket);
     }
@@ -139,6 +183,8 @@ public class TicketService {
             throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
         }
 
+        TicketStatus currentStatus = ticket.getStatus();
+
         User agent = authenticatedUserProvider.getAuthenticatedUser();
 
         ticket.setAssignedTo(agent);
@@ -147,7 +193,8 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        createHistory(savedTicket, "TICKET_ASSIGNED", null, agent.getName(), agent);
+        createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED, currentStatus.name(), ticket.getStatus().name(), agent);
+        createHistory(savedTicket, TicketHistoryAction.TICKET_ASSIGNED, null, agent.getName(), agent);
 
         return toResponse(savedTicket);
     }
@@ -174,7 +221,7 @@ public class TicketService {
         );
     }
 
-    private void createHistory(Ticket ticket, String action, String oldValue, String newValue, User performedBy) {
+    private void createHistory(Ticket ticket, TicketHistoryAction action, String oldValue, String newValue, User performedBy) {
 
         TicketHistory history = TicketHistory.builder()
                 .ticket(ticket)
