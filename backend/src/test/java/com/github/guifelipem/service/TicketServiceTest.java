@@ -8,6 +8,8 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketHistoryAction;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.enums.UserRole;
+import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
@@ -18,8 +20,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -99,5 +102,46 @@ class TicketServiceTest {
                 assertEquals(TicketStatus.OPEN.name(), historyToSave.getNewValue());
                 assertEquals(user, historyToSave.getPerformedBy());
                 assertNotNull(historyToSave.getCreatedAt());
+        }
+
+        @Test
+        void shouldThrowForbiddenExceptionWhenClientTriesToAccessAnotherUsersTicket() {
+                User owner = User.builder()
+                        .id(1L)
+                        .name("Guilherme")
+                        .role(UserRole.CLIENT)
+                        .build();
+
+                User anotherClient = User.builder()
+                        .id(2L)
+                        .name("João")
+                        .role(UserRole.CLIENT)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .title("Problema no sistema")
+                        .description("Descrição")
+                        .priority(TicketPriority.HIGH)
+                        .status(TicketStatus.OPEN)
+                        .createdBy(owner)
+                        .build();
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(anotherClient);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.findById(1L)
+                );
+
+                assertEquals(
+                        "Você não tem permissão para visualizar este chamado",
+                        exception.getMessage()
+                );
+
         }
 }
