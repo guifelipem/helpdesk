@@ -2,6 +2,7 @@ package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
@@ -10,6 +11,8 @@ import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
+import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
+import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
@@ -20,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -105,6 +109,22 @@ class TicketServiceTest {
         }
 
         @Test
+        void shouldThrowTicketNotFoundExceptionWhenTicketDoesNotExist() {
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.empty());
+
+                TicketNotFoundException exception = assertThrows(
+                        TicketNotFoundException.class,
+                        () -> ticketService.findById(1L)
+                );
+
+                assertEquals(
+                        "Chamado não encontrado",
+                        exception.getMessage()
+                );
+        }
+
+        @Test
         void shouldThrowForbiddenExceptionWhenClientTriesToAccessAnotherUsersTicket() {
                 User owner = User.builder()
                         .id(1L)
@@ -142,6 +162,24 @@ class TicketServiceTest {
                         "Você não tem permissão para visualizar este chamado",
                         exception.getMessage()
                 );
+        }
 
+        @Test
+        void shouldThrowForbiddenExceptionWhenTryingToUpdateStatusToClosed() {
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .build();
+
+                UpdateTicketStatusRequest updateTicketStatusRequest =
+                        new UpdateTicketStatusRequest(TicketStatus.CLOSED);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.updateStatus(1L, updateTicketStatusRequest)
+                );
         }
 }
