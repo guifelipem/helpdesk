@@ -181,5 +181,94 @@ class TicketServiceTest {
                         ForbiddenException.class,
                         () -> ticketService.updateStatus(1L, updateTicketStatusRequest)
                 );
+
+                assertEquals(
+                        "O fechamento do chamado deve ser confirmado pelo cliente",
+                        exception.getMessage()
+                );
         }
+
+        @Test
+        void shouldThrowInvalidTicketStatusTransitionExceptionWhenTransitionIsInvalid() {
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.OPEN)
+                        .build();
+
+                UpdateTicketStatusRequest updateTicketStatusRequest =
+                        new UpdateTicketStatusRequest(TicketStatus.WAITING_CLIENT);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                InvalidTicketStatusTransitionException exception = assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.updateStatus(1L, updateTicketStatusRequest)
+                );
+
+                TicketStatus newStatus = updateTicketStatusRequest.status();
+
+                assertEquals(
+                        "Transição de status inválida: " + ticket.getStatus() + " -> " + newStatus,
+                        exception.getMessage()
+                );
+        }
+
+        @Test
+        void shouldUpdateTicketStatusSuccessfully() {
+                User user = User.builder()
+                        .id(1L)
+                        .name("Guilherme")
+                        .email("guilherme@email.com")
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(user)
+                        .build();
+
+                UpdateTicketStatusRequest request =
+                        new UpdateTicketStatusRequest(TicketStatus.IN_PROGRESS);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(user);
+
+                when(ticketRepository.save(ticket))
+                        .thenReturn(ticket);
+
+                TicketResponse response = ticketService.updateStatus(1L, request);
+
+                // Assert
+                ArgumentCaptor<Ticket> ticketCaptor =
+                        ArgumentCaptor.forClass(Ticket.class);
+
+                verify(ticketRepository).save(ticketCaptor.capture());
+
+                Ticket ticketToSave = ticketCaptor.getValue();
+
+                assertEquals(request.status(), ticketToSave.getStatus());
+                assertEquals(TicketStatus.IN_PROGRESS, ticketToSave.getStatus());
+
+                assertEquals(1L, response.id());
+
+                ArgumentCaptor<TicketHistory> historyCaptor =
+                        ArgumentCaptor.forClass(TicketHistory.class);
+
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+
+                TicketHistory historyToSave = historyCaptor.getValue();
+
+                assertEquals(ticketToSave, historyToSave.getTicket());
+                assertEquals(TicketHistoryAction.STATUS_CHANGED, historyToSave.getAction());
+                assertEquals(TicketStatus.WAITING_CLIENT.name(), historyToSave.getOldValue());
+                assertEquals(TicketStatus.IN_PROGRESS.name(), historyToSave.getNewValue());
+                assertEquals(user, historyToSave.getPerformedBy());
+                assertNotNull(historyToSave.getCreatedAt());
+        }
+
+
 }

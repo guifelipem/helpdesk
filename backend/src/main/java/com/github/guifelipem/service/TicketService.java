@@ -125,7 +125,6 @@ public class TicketService {
         }
 
         if (!currentStatus.canTransitionTo(newStatus)) {
-
             throw new InvalidTicketStatusTransitionException(
                     "Transição de status inválida: " + currentStatus + " -> " + newStatus
             );
