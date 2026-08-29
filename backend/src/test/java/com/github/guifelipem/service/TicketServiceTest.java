@@ -12,6 +12,7 @@ import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
+import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
@@ -22,14 +23,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {
@@ -306,6 +308,7 @@ class TicketServiceTest {
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .createdBy(owner)
+                        .status(TicketStatus.RESOLVED)
                         .build();
 
                 when(ticketRepository.findById(1L))
@@ -325,5 +328,226 @@ class TicketServiceTest {
                 );
         }
 
+        @Test
+        void shouldThrowInvalidTicketStatusTransitionExceptionWhenClosingTicketThatIsNotResolved() {
+                User user = User.builder()
+                        .id(1L)
+                        .build();
 
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.OPEN)
+                        .createdBy(user)
+                        .build();
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(user);
+
+                InvalidTicketStatusTransitionException exception = assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.closeTicket(1L)
+                );
+
+                assertEquals(
+                        "Apenas chamados resolvidos podem ser fechados",
+                        exception.getMessage()
+                );
+        }
+
+        @Test
+        void shouldCloseTicketSuccessfully() {
+                User user = User.builder()
+                        .id(1L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .createdBy(user)
+                        .build();
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(user);
+
+                when(ticketRepository.save(ticket))
+                        .thenReturn(ticket);
+
+                TicketResponse response = ticketService.closeTicket(1L);
+
+                // Assert
+                ArgumentCaptor<Ticket> ticketCaptor =
+                        ArgumentCaptor.forClass(Ticket.class);
+
+                verify(ticketRepository).save(ticketCaptor.capture());
+
+                Ticket ticketToSave = ticketCaptor.getValue();
+
+                assertEquals(TicketStatus.CLOSED, ticketToSave.getStatus());
+                assertEquals(1L, response.id());
+                assertEquals(TicketStatus.CLOSED, response.status());
+
+                ArgumentCaptor<TicketHistory> historyCaptor =
+                        ArgumentCaptor.forClass(TicketHistory.class);
+
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+
+                TicketHistory historyToSave = historyCaptor.getValue();
+
+                assertEquals(ticketToSave, historyToSave.getTicket());
+                assertEquals(TicketHistoryAction.STATUS_CHANGED, historyToSave.getAction());
+                assertEquals(TicketStatus.RESOLVED.name(), historyToSave.getOldValue());
+                assertEquals(TicketStatus.CLOSED.name(), historyToSave.getNewValue());
+                assertEquals(user, historyToSave.getPerformedBy());
+                assertNotNull(historyToSave.getCreatedAt());
+        }
+
+        @Test
+        void shouldThrowTicketNotFoundExceptionWhenAssigningNonExistingTicket() {
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.empty());
+
+                TicketNotFoundException exception = assertThrows(
+                        TicketNotFoundException.class,
+                        () -> ticketService.assignToMe(1L)
+                );
+
+                assertEquals(
+                        "Chamado não encontrado",
+                        exception.getMessage()
+                );
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = TicketStatus.class,
+                names = {"RESOLVED", "CLOSED"}
+        )
+        void shouldThrowInvalidTicketStatusTransitionExceptionWhenTicketStatusNonValid(TicketStatus status) {
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(status)
+                        .build();
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                InvalidTicketStatusTransitionException exception = assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.assignToMe(1L)
+                );
+
+                assertEquals(
+                        "Chamado finalizado ou fechado não podem ser atribuídos",
+                        exception.getMessage()
+                );
+        }
+
+        @Test
+        void shouldThrowTicketAlreadyAssignedExceptionWhenTicketAlreadyAssigned() {
+                User agentAssigned = User.builder()
+                        .id(1L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.OPEN)
+                        .assignedTo(agentAssigned)
+                        .build();
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                TicketAlreadyAssignedException exception = assertThrows(
+                        TicketAlreadyAssignedException.class,
+                        () -> ticketService.assignToMe(1L)
+                );
+
+                assertEquals(
+                        "Chamado já está atribuído a um agente",
+                        exception.getMessage()
+                );
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = TicketStatus.class,
+                names = {"OPEN", "IN_PROGRESS", "WAITING_CLIENT"}
+        )
+        void shouldAssignTicketSuccessfully(TicketStatus status) {
+                User agent = User.builder()
+                        .id(1L)
+                        .build();
+
+                User user = User.builder()
+                        .id(2L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(user)
+                        .status(status)
+                        .build();
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
+
+                when(ticketRepository.save(ticket))
+                        .thenReturn(ticket);
+
+                TicketResponse response = ticketService.assignToMe(1L);
+
+                // Assert
+                ArgumentCaptor<Ticket> ticketCaptor =
+                        ArgumentCaptor.forClass(Ticket.class);
+
+                verify(ticketRepository).save(ticketCaptor.capture());
+
+                Ticket ticketToSave = ticketCaptor.getValue();
+
+                assertEquals(TicketStatus.IN_PROGRESS, ticketToSave.getStatus());
+                assertEquals(agent, ticketToSave.getAssignedTo());
+                assertEquals(1L, response.id());
+                assertEquals(TicketStatus.IN_PROGRESS, response.status());
+                assertEquals(agent.getId(), response.assignedTo().id());
+
+                ArgumentCaptor<TicketHistory> historyCaptor =
+                        ArgumentCaptor.forClass(TicketHistory.class);
+
+                verify(ticketHistoryRepository, times(2))
+                        .save(historyCaptor.capture());
+
+                List<TicketHistory> histories = historyCaptor.getAllValues();
+
+                TicketHistory statusHistory = histories.get(0);
+                TicketHistory assignmentHistory = histories.get(1);
+
+                assertEquals(ticketToSave, statusHistory.getTicket());
+                assertEquals(TicketHistoryAction.STATUS_CHANGED, statusHistory.getAction());
+                assertEquals(status.name(), statusHistory.getOldValue());
+                assertEquals(TicketStatus.IN_PROGRESS.name(), statusHistory.getNewValue());
+                assertEquals(agent, statusHistory.getPerformedBy());
+
+                assertEquals(ticketToSave, assignmentHistory.getTicket());
+                assertEquals(TicketHistoryAction.TICKET_ASSIGNED, assignmentHistory.getAction());
+                assertNull(assignmentHistory.getOldValue());
+                assertEquals(ticketToSave.getAssignedTo().getName(), assignmentHistory.getNewValue());
+                assertEquals(agent, assignmentHistory.getPerformedBy());
+
+                assertNotNull(statusHistory.getCreatedAt());
+                assertNotNull(assignmentHistory.getCreatedAt());
+        }
+
+        @Test
+        void shouldFindAllSuccessfully() {
+
+        }
 }

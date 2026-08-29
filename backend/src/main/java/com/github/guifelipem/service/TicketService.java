@@ -151,12 +151,12 @@ public class TicketService {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
-        if (!ticket.getCreatedBy().getId().equals(user.getId())) {
-            throw new ForbiddenException("Você não tem permissão para fechar este chamado");
-        }
-
         if (ticket.getStatus() != TicketStatus.RESOLVED) {
             throw new InvalidTicketStatusTransitionException("Apenas chamados resolvidos podem ser fechados");
+        }
+
+        if (!ticket.getCreatedBy().getId().equals(user.getId())) {
+            throw new ForbiddenException("Você não tem permissão para fechar este chamado");
         }
 
         TicketStatus currentStatus = ticket.getStatus();
@@ -177,7 +177,7 @@ public class TicketService {
         Ticket ticket = findTicketById(ticketId);
 
         if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
-            throw new InvalidTicketStatusTransitionException("Chamado finalizado ou fechado não podem ser atribuídos.");
+            throw new InvalidTicketStatusTransitionException("Chamado finalizado ou fechado não podem ser atribuídos");
         }
 
         if (ticket.getAssignedTo() != null) {
