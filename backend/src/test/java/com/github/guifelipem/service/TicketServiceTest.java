@@ -51,8 +51,6 @@ class TicketServiceTest {
                 // Arrange
                 User user = User.builder()
                         .id(1L)
-                        .name("Guilherme")
-                        .email("guilherme@email.com")
                         .build();
 
                 CreateTicketRequest request = new CreateTicketRequest(
@@ -125,25 +123,37 @@ class TicketServiceTest {
         }
 
         @Test
+        void shouldThrowTicketNotFoundExceptionWhenUpdatingStatusNonExistingTicket() {
+                UpdateTicketStatusRequest updateTicketStatusRequest =
+                        new UpdateTicketStatusRequest(TicketStatus.WAITING_CLIENT);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.empty());
+
+                TicketNotFoundException exception = assertThrows(
+                        TicketNotFoundException.class,
+                        () -> ticketService.updateStatus(1L, updateTicketStatusRequest)
+                );
+
+                assertEquals(
+                        "Chamado não encontrado",
+                        exception.getMessage()
+                );
+        }
+
+        @Test
         void shouldThrowForbiddenExceptionWhenClientTriesToAccessAnotherUsersTicket() {
                 User owner = User.builder()
                         .id(1L)
-                        .name("Guilherme")
-                        .role(UserRole.CLIENT)
                         .build();
 
                 User anotherClient = User.builder()
                         .id(2L)
-                        .name("João")
                         .role(UserRole.CLIENT)
                         .build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
-                        .title("Problema no sistema")
-                        .description("Descrição")
-                        .priority(TicketPriority.HIGH)
-                        .status(TicketStatus.OPEN)
                         .createdBy(owner)
                         .build();
 
@@ -218,8 +228,6 @@ class TicketServiceTest {
         void shouldUpdateTicketStatusSuccessfully() {
                 User user = User.builder()
                         .id(1L)
-                        .name("Guilherme")
-                        .email("guilherme@email.com")
                         .build();
 
                 Ticket ticket = Ticket.builder()
@@ -251,7 +259,6 @@ class TicketServiceTest {
                 Ticket ticketToSave = ticketCaptor.getValue();
 
                 assertEquals(request.status(), ticketToSave.getStatus());
-                assertEquals(TicketStatus.IN_PROGRESS, ticketToSave.getStatus());
 
                 assertEquals(1L, response.id());
 
@@ -268,6 +275,54 @@ class TicketServiceTest {
                 assertEquals(TicketStatus.IN_PROGRESS.name(), historyToSave.getNewValue());
                 assertEquals(user, historyToSave.getPerformedBy());
                 assertNotNull(historyToSave.getCreatedAt());
+        }
+
+        @Test
+        void shouldThrowTicketNotFoundExceptionWhenClosingNonExistingTicket() {
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.empty());
+
+                TicketNotFoundException exception = assertThrows(
+                        TicketNotFoundException.class,
+                        () -> ticketService.closeTicket(1L)
+                );
+
+                assertEquals(
+                        "Chamado não encontrado",
+                        exception.getMessage()
+                );
+        }
+
+        @Test
+        void shouldThrowForbiddenExceptionWhenClientTriesToCloseAnotherUsersTicket() {
+                User owner = User.builder()
+                        .id(1L)
+                        .build();
+
+                User anotherClient = User.builder()
+                        .id(2L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(owner)
+                        .build();
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(anotherClient);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.closeTicket(1L)
+                );
+
+                assertEquals(
+                        "Você não tem permissão para fechar este chamado",
+                        exception.getMessage()
+                );
         }
 
 

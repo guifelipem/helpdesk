@@ -93,12 +93,17 @@ public class TicketService {
         );
     }
 
+    private Ticket findTicketById(Long ticketId) {
+        return ticketRepository.findById(ticketId)
+                .orElseThrow(() ->
+                        new TicketNotFoundException("Chamado não encontrado")
+                );
+    }
+
     @Transactional(readOnly = true)
     public TicketResponse findById(Long id) {
 
-        Ticket ticket = ticketRepository.findById(id).orElseThrow(() ->
-                    new TicketNotFoundException("Chamado não encontrado")
-        );
+        Ticket ticket = findTicketById(id);
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
@@ -112,8 +117,7 @@ public class TicketService {
     @Transactional
     public TicketResponse updateStatus(Long ticketId, UpdateTicketStatusRequest request) {
 
-        Ticket ticket = ticketRepository.findById(ticketId).
-                orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
+        Ticket ticket = findTicketById(ticketId);
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
@@ -143,8 +147,7 @@ public class TicketService {
     @Transactional
     public TicketResponse closeTicket(Long ticketId) {
 
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
+        Ticket ticket = findTicketById(ticketId);
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
@@ -171,8 +174,7 @@ public class TicketService {
     @Transactional
     public TicketResponse assignToMe(Long ticketId) {
 
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new TicketNotFoundException("Chamado não encontrado"));
+        Ticket ticket = findTicketById(ticketId);
 
         if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
             throw new InvalidTicketStatusTransitionException("Chamado finalizado ou fechado não podem ser atribuídos.");
