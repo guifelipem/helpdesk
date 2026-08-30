@@ -235,5 +235,4 @@ public class TicketService {
 
         ticketHistoryRepository.save(history);
     }
-
 }
