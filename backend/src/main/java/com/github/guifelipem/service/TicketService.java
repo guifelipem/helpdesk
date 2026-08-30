@@ -151,12 +151,12 @@ public class TicketService {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
-        if (ticket.getStatus() != TicketStatus.RESOLVED) {
-            throw new InvalidTicketStatusTransitionException("Apenas chamados resolvidos podem ser fechados");
-        }
-
         if (!ticket.getCreatedBy().getId().equals(user.getId())) {
             throw new ForbiddenException("Você não tem permissão para fechar este chamado");
+        }
+
+        if (ticket.getStatus() != TicketStatus.RESOLVED) {
+            throw new InvalidTicketStatusTransitionException("Apenas chamados resolvidos podem ser fechados");
         }
 
         TicketStatus currentStatus = ticket.getStatus();

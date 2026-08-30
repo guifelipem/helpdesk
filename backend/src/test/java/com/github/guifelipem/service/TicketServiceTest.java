@@ -1,5 +1,6 @@
 package com.github.guifelipem.service;
 
+import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
@@ -19,12 +20,18 @@ import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -428,7 +435,7 @@ class TicketServiceTest {
                 value = TicketStatus.class,
                 names = {"RESOLVED", "CLOSED"}
         )
-        void shouldThrowInvalidTicketStatusTransitionExceptionWhenTicketStatusNonValid(TicketStatus status) {
+        void shouldThrowInvalidTicketStatusTransitionExceptionWhenAssigningFinalizedTicket(TicketStatus status) {
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(status)
@@ -548,6 +555,211 @@ class TicketServiceTest {
 
         @Test
         void shouldFindAllSuccessfully() {
+                TicketStatus status = TicketStatus.OPEN;
+                TicketPriority priority = TicketPriority.LOW;
+                String search = "Teste";
+                Pageable pageable = PageRequest.of(0, 10);
 
+                User user = User.builder()
+                        .id(1L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(user)
+                        .build();
+
+                Page<Ticket> ticketsPage = new PageImpl<>(
+                        List.of(ticket),
+                        pageable,
+                        1
+                );
+
+                when(ticketRepository.findAllWithFilters(status, priority, search, pageable))
+                        .thenReturn(ticketsPage);
+
+                PageResponse<TicketResponse> response = ticketService.findAll(status, priority, search, pageable);
+
+                verify(ticketRepository).findAllWithFilters(status, priority, search, pageable);
+
+                assertEquals(1, response.content().size());
+                assertEquals(1L, response.content().getFirst().id());
+
+                assertEquals(0, response.page());
+                assertEquals(10, response.size());
+                assertEquals(1, response.totalElements());
+                assertEquals(1, response.totalPages());
+                assertTrue(response.last());
+        }
+
+        @Test
+        void shouldTrimSearchBeforeFindingTickets() {
+                TicketStatus status = TicketStatus.OPEN;
+                TicketPriority priority = TicketPriority.LOW;
+                String search = "     Teste    ";
+                Pageable pageable = PageRequest.of(0, 10);
+
+                User user = User.builder()
+                        .id(1L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(user)
+                        .build();
+
+                Page<Ticket> ticketsPage = new PageImpl<>(
+                        List.of(ticket),
+                        pageable,
+                        1
+                );
+
+                when(ticketRepository.findAllWithFilters(status, priority, "Teste", pageable))
+                        .thenReturn(ticketsPage);
+
+                ticketService.findAll(status, priority, search, pageable);
+
+                verify(ticketRepository).findAllWithFilters(status, priority, "Teste", pageable);
+        }
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @ValueSource(strings = {"     "})
+        void shouldPassNullToRepositoryWhenSearchIsBlank(String search) {
+                TicketStatus status = TicketStatus.OPEN;
+                TicketPriority priority = TicketPriority.LOW;
+                Pageable pageable = PageRequest.of(0, 10);
+
+                User user = User.builder()
+                        .id(1L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(user)
+                        .build();
+
+                Page<Ticket> ticketsPage = new PageImpl<>(
+                        List.of(ticket),
+                        pageable,
+                        1
+                );
+
+                when(ticketRepository.findAllWithFilters(status, priority, null, pageable))
+                        .thenReturn(ticketsPage);
+
+                ticketService.findAll(status, priority, search, pageable);
+
+                verify(ticketRepository).findAllWithFilters(status, priority, null, pageable);
+        }
+
+        @Test
+        void shouldFindMyTicketsSuccessfully() {
+                User user = User.builder()
+                        .id(1L)
+                        .build();
+
+                Ticket ticket1 = Ticket.builder()
+                        .id(1L)
+                        .createdBy(user)
+                        .build();
+
+                Ticket ticket2 = Ticket.builder()
+                        .id(2L)
+                        .createdBy(user)
+                        .build();
+
+                List<Ticket> meusTickets= List.of(ticket1, ticket2);
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(user);
+
+                when(ticketRepository.findByCreatedBy(user))
+                        .thenReturn(meusTickets);
+
+                List<TicketResponse> response = ticketService.findMyTickets();
+
+                verify(ticketRepository).findByCreatedBy(user);
+
+                assertEquals(2, response.size());
+
+                assertEquals(1L, response.getFirst().id());
+                assertEquals(2L, response.get(1).id());
+                assertEquals(user.getId(), response.getFirst().createdBy().id());
+        }
+
+        @Test
+        void shouldReturnEmptyListWhenUserHasNoTickets() {
+                User user = User.builder()
+                        .id(1L)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(user);
+
+                when(ticketRepository.findByCreatedBy(user))
+                        .thenReturn(List.of());
+
+                List<TicketResponse> response = ticketService.findMyTickets();
+
+                verify(ticketRepository).findByCreatedBy(user);
+
+                assertTrue(response.isEmpty());
+        }
+
+        @Test
+        void shouldFindTicketByIdAsClientSuccessfully() {
+                User user = User.builder()
+                        .id(1L)
+                        .role(UserRole.CLIENT)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(user)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(user);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                TicketResponse response = ticketService.findById(1L);
+
+                verify(ticketRepository).findById(1L);
+
+                assertEquals(1L, response.id());
+                assertEquals(user.getId(), response.createdBy().id());
+        }
+
+        @Test
+        void shouldAllowAgentToAccessAnotherUsersTicket() {
+                User agent = User.builder()
+                        .id(2L)
+                        .role(UserRole.AGENT)
+                        .build();
+
+                User user = User.builder()
+                        .id(1L)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(user)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(ticket));
+
+                TicketResponse response = ticketService.findById(1L);
+
+                verify(ticketRepository).findById(1L);
+
+                assertEquals(1L, response.id());
+                assertEquals(user.getId(), response.createdBy().id());
         }
 }
