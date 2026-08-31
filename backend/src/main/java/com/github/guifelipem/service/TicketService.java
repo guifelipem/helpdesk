@@ -208,9 +208,28 @@ public class TicketService {
             Pageable pageable
     ) {
 
+        User currentUser = authenticatedUserProvider.getAuthenticatedUser();
+
         String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
 
-        Page<Ticket> tickets = ticketRepository.findAllWithFilters(status, priority, normalizedSearch, pageable);
+        Page<Ticket> tickets;
+
+        if (currentUser.getRole() == UserRole.AGENT) {
+            tickets = ticketRepository.findAllVisibleToAgentWithFilters(
+                    currentUser.getId(),
+                    status,
+                    priority,
+                    normalizedSearch,
+                    pageable
+            );
+        } else {
+            tickets = ticketRepository.findAllWithFilters(
+                    status,
+                    priority,
+                    normalizedSearch,
+                    pageable
+            );
+        }
 
         return new PageResponse<>(
                 tickets.getContent().stream().map(this::toResponse).toList(),
