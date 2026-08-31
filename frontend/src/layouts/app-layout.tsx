@@ -36,7 +36,7 @@ export function AppLayout() {
                 <nav className="mt-4 flex gap-2 lg:mt-10 lg:flex-col">
                     <NavLink to="/tickets" className={navClass}>
                         <Ticket className="size-4 text-[#6f95ff]" />
-                        Tickets
+                        Chamados
                     </NavLink>
 
                     {canSeeDashboard && (

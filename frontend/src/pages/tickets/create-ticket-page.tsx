@@ -29,7 +29,7 @@ export function CreateTicketPage() {
             <div className="rounded-3xl bg-gradient-to-r from-[#301c41] to-[#413b6b] px-6 py-7 text-white shadow-[0_20px_50px_-30px_#301c41]">
                 <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-white/10 text-[#aebfff]"><PlusCircle className="size-5" /></div>
                 <h1 className="text-3xl font-bold tracking-tight">
-                    Novo Ticket
+                    Novo chamado
                 </h1>
                 <p className="mt-2 text-white/60">
                     Descreva o problema para que a equipe possa te ajudar.

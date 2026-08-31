@@ -78,11 +78,11 @@ export function TicketsPage() {
         return (
             <div className="rounded-3xl border border-dashed border-[#5c65c0]/25 bg-white/70 px-6 py-16 text-center shadow-sm">
                 <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[#ececff] text-[#5c65c0]"><TicketIcon /></div>
-                <h1 className="text-2xl font-bold tracking-tight">Nenhum ticket por aqui</h1>
-                <p className="mb-6 mt-2 text-muted-foreground">Você ainda não possui tickets.</p>
+                <h1 className="text-2xl font-bold tracking-tight">Nenhum chamado por aqui</h1>
+                <p className="mb-6 mt-2 text-muted-foreground">Você ainda não possui chamados.</p>
 
                 <Button asChild>
-                    <Link to="/tickets/new"><Plus /> Novo Ticket</Link>
+                    <Link to="/tickets/new"><Plus /> Novo chamado</Link>
                 </Button>
             </div>
         );
@@ -95,7 +95,7 @@ export function TicketsPage() {
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#aebfff]"><Sparkles className="size-3.5" /> Central de atendimento</div>
-                    <h1 className="text-3xl font-bold tracking-tight">Seus tickets</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Seus chamados</h1>
                     <p className="mt-2 max-w-xl text-sm text-white/65">
                         {isClient
                             ? "Acompanhe os chamados que você abriu."
@@ -106,7 +106,7 @@ export function TicketsPage() {
 
                 {isClient && (
                     <Button asChild className="bg-[#6f95ff] text-white shadow-[#1c0b2b]/40 hover:bg-[#83a4ff]">
-                        <Link to="/tickets/new"><Plus /> Novo Ticket</Link>
+                        <Link to="/tickets/new"><Plus /> Novo chamado</Link>
                     </Button>
                 )}
                 </div>

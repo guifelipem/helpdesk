@@ -77,7 +77,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
             </div>
 
             <Button type="submit" size="lg" disabled={isSubmitting}>
-                {isSubmitting ? "Criando..." : "Criar ticket"}
+                {isSubmitting ? "Criando..." : "Criar chamado"}
             </Button>
         </form>
     )

@@ -34,7 +34,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
     return (
         <div className="space-y-6">
             <Button asChild variant="outline">
-                <Link to="/tickets"><ArrowLeft /> Voltar para Tickets</Link>
+                <Link to="/tickets"><ArrowLeft /> Voltar para chamados</Link>
             </Button>
 
             <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#301c41] via-[#413b6b] to-[#5c65c0] text-white ring-0">
@@ -43,7 +43,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#aebfff]">
-                                Ticket #{ticket.id}
+                                Chamado #{ticket.id}
                             </p>
 
                             <CardTitle className="mt-1 text-2xl">
