@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Headphones, LockKeyhole, Mail } from "lucide-react";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -54,10 +55,14 @@ export function LoginPage() {
   )
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Entrar</CardTitle>
+    <main className="auth-background relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      <div className="absolute left-[8%] top-[12%] size-56 rounded-full border border-white/10" />
+      <div className="absolute bottom-[8%] right-[7%] size-80 rounded-full border border-white/8" />
+      <Card className="relative w-full max-w-md border-white/20 bg-white/96 px-2 py-2 shadow-[0_30px_80px_-25px_#00000090] backdrop-blur-xl">
+        <CardHeader className="pb-2 text-center">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6f95ff] to-[#5c65c0] text-white shadow-lg shadow-[#5c65c0]/25"><Headphones className="size-6" /></div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#5c65c0]">Helpdesk</p>
+          <CardTitle className="mt-2 text-2xl font-bold tracking-tight">Bem-vindo de volta</CardTitle>
           <CardDescription>
             Acesse sua conta para gerenciar chamados.
           </CardDescription>
@@ -67,12 +72,10 @@ export function LoginPage() {
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="voce@email.com"
-                {...form.register("email")}
-              />
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input id="email" type="email" placeholder="voce@email.com" className="pl-10" {...form.register("email")} />
+              </div>
               {form.formState.errors.email && (
                 <p className="text-sm text-destructive">
                   {form.formState.errors.email.message}
@@ -82,12 +85,10 @@ export function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Sua senha"
-                {...form.register("password")}
-              />
+              <div className="relative">
+                <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input id="password" type="password" placeholder="Sua senha" className="pl-10" {...form.register("password")} />
+              </div>
               {form.formState.errors.password && (
                 <p className="text-sm text-destructive">
                   {form.formState.errors.password.message}
@@ -101,7 +102,7 @@ export function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="mt-2 w-full"
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? "Entrando..." : "Entrar"}

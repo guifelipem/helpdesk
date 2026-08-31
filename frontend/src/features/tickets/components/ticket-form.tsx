@@ -28,7 +28,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
     });
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
                 <Label htmlFor="title">Título</Label>
                 <Input 
@@ -62,7 +62,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                 <Label htmlFor="priority">Prioridade</Label>
                 <select
                     id="priority"
-                    className="h-9 w-full rounded-md border border-input bg-transparent px-3"
+                    className="h-11 w-full rounded-xl border border-input bg-white/80 px-3.5 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
                     {...register("priority")}
                 >
                     <option value="LOW">Baixa</option>
@@ -76,7 +76,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                 )}
             </div>
 
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" size="lg" disabled={isSubmitting}>
                 {isSubmitting ? "Criando..." : "Criar ticket"}
             </Button>
         </form>

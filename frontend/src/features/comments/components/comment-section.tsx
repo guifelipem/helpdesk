@@ -11,6 +11,7 @@ import { useComments, useCreateComment } from "../hooks/use-comments";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { Label } from "@/components/ui/label";
 import type { TicketStatus } from "@/features/tickets/types/ticket.types";
+import { MessageSquareText, Send } from "lucide-react";
 
 type CommentSectionProps = {
     ticketId: number;
@@ -61,7 +62,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Comentários</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg font-bold"><span className="flex size-8 items-center justify-center rounded-lg bg-[#ececff] text-[#5c65c0]"><MessageSquareText className="size-4" /></span>Comentários</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-4">
@@ -71,7 +72,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                         Este chamado foi encerrado e não aceita novos comentários.
                     </p>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3 rounded-xl border border-[#413b6b]/8 bg-[#f8f8ff] p-4">
                         <Textarea
                             placeholder="Escreva um comentário..."
                             value={message}
@@ -85,7 +86,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                                     type="checkbox"
                                     checked={isInternal}
                                     onChange={(event) => setIsInternal(event.target.checked)}
-                                    className="size-4"
+                                    className="size-4 accent-[#5c65c0]"
                                 />
 
                                 <Label htmlFor="internal-comment">
@@ -98,7 +99,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                             onClick={handleCreateComment}
                             disabled={createCommentMutation.isPending}
                         >
-                            {createCommentMutation.isPending ? "Enviando..." : "Enviar comentário"}
+                            <Send /> {createCommentMutation.isPending ? "Enviando..." : "Enviar comentário"}
                         </Button>
 
                         {createCommentMutation.error && (
@@ -135,8 +136,8 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                                     className={`rounded-lg border p-3 ${comment.isInternal
                                         ? "border-amber-300 bg-amber-50"
                                         : isSupport
-                                            ? "bg-muted/40"
-                                            : "bg-background"
+                                            ? "border-[#6f95ff]/15 bg-[#f4f6ff]"
+                                            : "bg-white"
                                         }`}
                                 >
                                     <div className="flex items-start justify-between gap-3">
