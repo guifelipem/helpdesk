@@ -554,19 +554,20 @@ class TicketServiceTest {
         }
 
         @Test
-        void shouldFindAllSuccessfully() {
+        void shouldFindAllTicketsAsAdminSuccessfully() {
                 TicketStatus status = TicketStatus.OPEN;
                 TicketPriority priority = TicketPriority.LOW;
                 String search = "Teste";
                 Pageable pageable = PageRequest.of(0, 10);
 
-                User user = User.builder()
+                User admin = User.builder()
                         .id(1L)
+                        .role(UserRole.ADMIN)
                         .build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
-                        .createdBy(user)
+                        .createdBy(admin)
                         .build();
 
                 Page<Ticket> ticketsPage = new PageImpl<>(
@@ -575,12 +576,16 @@ class TicketServiceTest {
                         1
                 );
 
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(admin);
+
                 when(ticketRepository.findAllWithFilters(status, priority, search, pageable))
                         .thenReturn(ticketsPage);
 
                 PageResponse<TicketResponse> response = ticketService.findAll(status, priority, search, pageable);
 
                 verify(ticketRepository).findAllWithFilters(status, priority, search, pageable);
+                verify(ticketRepository, never()).findAllVisibleToAgentWithFilters(any(), any(), any(), any(), any());
 
                 assertEquals(1, response.content().size());
                 assertEquals(1L, response.content().getFirst().id());
@@ -593,19 +598,26 @@ class TicketServiceTest {
         }
 
         @Test
-        void shouldTrimSearchBeforeFindingTickets() {
-                TicketStatus status = TicketStatus.OPEN;
-                TicketPriority priority = TicketPriority.LOW;
-                String search = "     Teste    ";
+        void shouldFindOnlyTicketsVisibleToAuthenticatedAgent() {
+                TicketStatus status = TicketStatus.IN_PROGRESS;
+                TicketPriority priority = TicketPriority.HIGH;
+                String search = "  Sistema  ";
                 Pageable pageable = PageRequest.of(0, 10);
 
-                User user = User.builder()
+                User agent = User.builder()
+                        .id(2L)
+                        .role(UserRole.AGENT)
+                        .build();
+
+                User client = User.builder()
                         .id(1L)
+                        .role(UserRole.CLIENT)
                         .build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
-                        .createdBy(user)
+                        .createdBy(client)
+                        .assignedTo(agent)
                         .build();
 
                 Page<Ticket> ticketsPage = new PageImpl<>(
@@ -613,6 +625,53 @@ class TicketServiceTest {
                         pageable,
                         1
                 );
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
+
+                when(ticketRepository.findAllVisibleToAgentWithFilters(
+                        agent.getId(), status, priority, "Sistema", pageable
+                )).thenReturn(ticketsPage);
+
+                PageResponse<TicketResponse> response = ticketService.findAll(
+                        status, priority, search, pageable
+                );
+
+                verify(ticketRepository).findAllVisibleToAgentWithFilters(
+                        agent.getId(), status, priority, "Sistema", pageable
+                );
+                verify(ticketRepository, never()).findAllWithFilters(any(), any(), any(), any());
+
+                assertEquals(1, response.content().size());
+                assertEquals(ticket.getId(), response.content().getFirst().id());
+                assertEquals(agent.getId(), response.content().getFirst().assignedTo().id());
+        }
+
+        @Test
+        void shouldTrimSearchBeforeFindingTickets() {
+                TicketStatus status = TicketStatus.OPEN;
+                TicketPriority priority = TicketPriority.LOW;
+                String search = "     Teste    ";
+                Pageable pageable = PageRequest.of(0, 10);
+
+                User admin = User.builder()
+                        .id(1L)
+                        .role(UserRole.ADMIN)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(admin)
+                        .build();
+
+                Page<Ticket> ticketsPage = new PageImpl<>(
+                        List.of(ticket),
+                        pageable,
+                        1
+                );
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(admin);
 
                 when(ticketRepository.findAllWithFilters(status, priority, "Teste", pageable))
                         .thenReturn(ticketsPage);
@@ -630,13 +689,14 @@ class TicketServiceTest {
                 TicketPriority priority = TicketPriority.LOW;
                 Pageable pageable = PageRequest.of(0, 10);
 
-                User user = User.builder()
+                User admin = User.builder()
                         .id(1L)
+                        .role(UserRole.ADMIN)
                         .build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
-                        .createdBy(user)
+                        .createdBy(admin)
                         .build();
 
                 Page<Ticket> ticketsPage = new PageImpl<>(
@@ -644,6 +704,9 @@ class TicketServiceTest {
                         pageable,
                         1
                 );
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(admin);
 
                 when(ticketRepository.findAllWithFilters(status, priority, null, pageable))
                         .thenReturn(ticketsPage);
