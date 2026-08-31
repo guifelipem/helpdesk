@@ -10,15 +10,15 @@ const priorityMap: Record<
 > = {
     LOW: {
         label: "Baixa",
-        className: "bg-green-100 text-green-800",
+        className: "border border-emerald-200 bg-emerald-50 text-emerald-700",
     },
     MEDIUM: {
         label: "Média",
-        className: "bg-yellow-100 text-yellow-800",
+        className: "border border-amber-200 bg-amber-50 text-amber-700",
     },
     HIGH: {
         label: "Alta",
-        className: "bg-red-100 text-red-800",
+        className: "border border-rose-200 bg-rose-50 text-rose-700",
     },
 };
 

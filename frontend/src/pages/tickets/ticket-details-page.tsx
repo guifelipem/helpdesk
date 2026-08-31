@@ -19,7 +19,7 @@ export function TicketDetailsPage() {
     }
 
     if (isError || !ticket) {
-        return <p>Ticket não encontrado.</p>
+        return <p>Chamado não encontrado.</p>
     }
 
     return (
