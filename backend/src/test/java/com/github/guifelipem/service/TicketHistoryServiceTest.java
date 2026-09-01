@@ -172,4 +172,28 @@ class TicketHistoryServiceTest {
 
                 assertEquals(0, response.size());
         }
+
+        @Test
+        void shouldRejectHistoryForAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketHistoryService.findByTicket(1L)
+                );
+
+                assertEquals(
+                        "Somente o responsável pode acessar o histórico deste chamado",
+                        exception.getMessage()
+                );
+        }
 }

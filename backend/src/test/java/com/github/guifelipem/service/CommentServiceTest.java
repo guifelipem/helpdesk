@@ -432,4 +432,49 @@ public class CommentServiceTest {
                 assertEquals("Comentário interno", response.get(1).message());
                 assertEquals(true, response.get(1).isInternal());
         }
+
+        @Test
+        void shouldRejectCommentByAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.create(1L, new CreateCommentRequest("Teste", true))
+                );
+
+                assertEquals("Somente o responsável pode comentar neste chamado", exception.getMessage());
+        }
+
+        @Test
+        void shouldRejectCommentsForAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.findByTicket(1L)
+                );
+
+                assertEquals(
+                        "Somente o responsável pode acessar os comentários deste chamado",
+                        exception.getMessage()
+                );
+        }
 }

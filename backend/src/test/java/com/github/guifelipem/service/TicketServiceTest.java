@@ -185,9 +185,15 @@ class TicketServiceTest {
 
         @Test
         void shouldThrowForbiddenExceptionWhenTryingToUpdateStatusToClosed() {
+                User agent = User.builder()
+                        .id(1L)
+                        .role(UserRole.AGENT)
+                        .build();
+
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(TicketStatus.RESOLVED)
+                        .assignedTo(agent)
                         .build();
 
                 UpdateTicketStatusRequest updateTicketStatusRequest =
@@ -195,6 +201,9 @@ class TicketServiceTest {
 
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
 
                 ForbiddenException exception = assertThrows(
                         ForbiddenException.class,
@@ -209,9 +218,15 @@ class TicketServiceTest {
 
         @Test
         void shouldThrowInvalidTicketStatusTransitionExceptionWhenTransitionIsInvalid() {
+                User agent = User.builder()
+                        .id(1L)
+                        .role(UserRole.AGENT)
+                        .build();
+
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(TicketStatus.OPEN)
+                        .assignedTo(agent)
                         .build();
 
                 UpdateTicketStatusRequest updateTicketStatusRequest =
@@ -219,6 +234,9 @@ class TicketServiceTest {
 
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
 
                 InvalidTicketStatusTransitionException exception = assertThrows(
                         InvalidTicketStatusTransitionException.class,
@@ -243,6 +261,7 @@ class TicketServiceTest {
                         .id(1L)
                         .status(TicketStatus.WAITING_CLIENT)
                         .createdBy(user)
+                        .assignedTo(user)
                         .build();
 
                 UpdateTicketStatusRequest request =
@@ -284,6 +303,53 @@ class TicketServiceTest {
                 assertEquals(TicketStatus.IN_PROGRESS.name(), historyToSave.getNewValue());
                 assertEquals(user, historyToSave.getPerformedBy());
                 assertNotNull(historyToSave.getCreatedAt());
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = UserRole.class, names = {"AGENT", "ADMIN"})
+        void shouldRejectStatusUpdateByNonResponsibleStaff(UserRole role) {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User currentUser = User.builder().id(2L).role(role).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.IN_PROGRESS)
+                        .assignedTo(responsible)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(currentUser);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.updateStatus(
+                                1L,
+                                new UpdateTicketStatusRequest(TicketStatus.WAITING_CLIENT)
+                        )
+                );
+
+                assertEquals("Somente o responsável pode alterar o status deste chamado", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldRejectTicketDetailsForAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.findById(1L)
+                );
+
+                assertEquals("Somente o responsável pode visualizar este chamado", exception.getMessage());
         }
 
         @Test
