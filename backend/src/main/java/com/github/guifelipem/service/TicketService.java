@@ -111,6 +111,10 @@ public class TicketService {
             throw new ForbiddenException("Você não tem permissão para visualizar este chamado");
         }
 
+        if (user.getRole() != UserRole.CLIENT && isAssignedToAnotherUser(ticket, user)) {
+            throw new ForbiddenException("Somente o responsável pode visualizar este chamado");
+        }
+
         return toResponse(ticket);
     }
 
@@ -120,6 +124,10 @@ public class TicketService {
         Ticket ticket = findTicketById(ticketId);
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
+
+        if (ticket.getAssignedTo() == null || !ticket.getAssignedTo().getId().equals(user.getId())) {
+            throw new ForbiddenException("Somente o responsável pode alterar o status deste chamado");
+        }
 
         TicketStatus currentStatus = ticket.getStatus();
         TicketStatus newStatus = request.status();
@@ -239,6 +247,11 @@ public class TicketService {
                 tickets.getTotalPages(),
                 tickets.isLast()
         );
+    }
+
+    private boolean isAssignedToAnotherUser(Ticket ticket, User user) {
+        return ticket.getAssignedTo() != null
+                && !ticket.getAssignedTo().getId().equals(user.getId());
     }
 
     private void createHistory(Ticket ticket, TicketHistoryAction action, String oldValue, String newValue, User performedBy) {

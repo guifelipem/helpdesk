@@ -43,6 +43,11 @@ public class CommentService {
             throw new ForbiddenException("Você não tem acesso a este chamado");
         }
 
+        if (!isClient && (ticket.getAssignedTo() == null
+                || !ticket.getAssignedTo().getId().equals(user.getId()))) {
+            throw new ForbiddenException("Somente o responsável pode comentar neste chamado");
+        }
+
         if (ticket.getStatus() == TicketStatus.CLOSED) {
             throw new ForbiddenException("Não é possível comentar em um chamado encerrado");
         }
@@ -79,6 +84,11 @@ public class CommentService {
 
         if (isClient && !isOwner) {
             throw new ForbiddenException("Você não tem acesso a este chamado");
+        }
+
+        if (!isClient && ticket.getAssignedTo() != null
+                && !ticket.getAssignedTo().getId().equals(user.getId())) {
+            throw new ForbiddenException("Somente o responsável pode acessar os comentários deste chamado");
         }
 
         return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
