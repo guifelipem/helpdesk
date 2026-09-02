@@ -7,8 +7,11 @@ import com.github.guifelipem.enums.TicketStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
@@ -44,5 +47,23 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
             TicketPriority priority,
             String search,
             Pageable pageable
+    );
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+        UPDATE Ticket t
+        SET t.assignedTo = :agent,
+            t.status = :newStatus,
+            t.updatedAt = :updatedAt
+        WHERE t.id = :ticketId
+          AND t.assignedTo IS NULL
+          AND t.status = :expectedStatus
+    """)
+    int assignIfAvailable(
+            @Param("ticketId") Long ticketId,
+            @Param("agent") User agent,
+            @Param("expectedStatus") TicketStatus expectedStatus,
+            @Param("newStatus") TicketStatus newStatus,
+            @Param("updatedAt") LocalDateTime updatedAt
     );
 }
