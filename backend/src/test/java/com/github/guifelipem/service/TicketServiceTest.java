@@ -33,6 +33,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -482,6 +483,17 @@ class TicketServiceTest {
 
         @Test
         void shouldThrowTicketNotFoundExceptionWhenAssigningNonExistingTicket() {
+                User agent = User.builder().id(1L).build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(0);
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.empty());
 
@@ -494,19 +506,32 @@ class TicketServiceTest {
                         "Chamado não encontrado",
                         exception.getMessage()
                 );
+
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
         }
 
         @ParameterizedTest
         @EnumSource(
                 value = TicketStatus.class,
-                names = {"RESOLVED", "CLOSED"}
+                names = {"IN_PROGRESS", "WAITING_CLIENT", "RESOLVED", "CLOSED"}
         )
-        void shouldThrowInvalidTicketStatusTransitionExceptionWhenAssigningFinalizedTicket(TicketStatus status) {
+        void shouldThrowInvalidTicketStatusTransitionExceptionWhenAssigningNonOpenTicket(TicketStatus status) {
+                User agent = User.builder().id(1L).build();
+
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(status)
                         .build();
 
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(0);
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
 
@@ -516,13 +541,17 @@ class TicketServiceTest {
                 );
 
                 assertEquals(
-                        "Chamado finalizado ou fechado não podem ser atribuídos",
+                        "Apenas chamados em aberto podem ser atribuídos",
                         exception.getMessage()
                 );
+
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
         }
 
         @Test
         void shouldThrowTicketAlreadyAssignedExceptionWhenTicketAlreadyAssigned() {
+                User agent = User.builder().id(2L).build();
+
                 User agentAssigned = User.builder()
                         .id(1L)
                         .build();
@@ -533,6 +562,15 @@ class TicketServiceTest {
                         .assignedTo(agentAssigned)
                         .build();
 
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(0);
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
 
@@ -545,49 +583,54 @@ class TicketServiceTest {
                         "Chamado já está atribuído a um agente",
                         exception.getMessage()
                 );
+
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
         }
 
-        @ParameterizedTest
-        @EnumSource(
-                value = TicketStatus.class,
-                names = {"OPEN", "IN_PROGRESS", "WAITING_CLIENT"}
-        )
-        void shouldAssignTicketSuccessfully(TicketStatus status) {
+        @Test
+        void shouldAssignTicketSuccessfully() {
                 User agent = User.builder()
                         .id(1L)
+                        .name("Agente")
                         .build();
 
                 User user = User.builder()
                         .id(2L)
                         .build();
 
-                Ticket ticket = Ticket.builder()
+                Ticket updatedTicket = Ticket.builder()
                         .id(1L)
                         .createdBy(user)
-                        .status(status)
+                        .assignedTo(agent)
+                        .status(TicketStatus.IN_PROGRESS)
                         .build();
-
-                when(ticketRepository.findById(1L))
-                        .thenReturn(Optional.of(ticket));
 
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(agent);
 
-                when(ticketRepository.save(ticket))
-                        .thenReturn(ticket);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(1);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(updatedTicket));
 
                 TicketResponse response = ticketService.assignToMe(1L);
 
                 // Assert
-                ArgumentCaptor<Ticket> ticketCaptor =
-                        ArgumentCaptor.forClass(Ticket.class);
+                verify(ticketRepository).assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                );
+                verify(ticketRepository, never()).save(any(Ticket.class));
 
-                verify(ticketRepository).save(ticketCaptor.capture());
-
-                Ticket ticketToSave = ticketCaptor.getValue();
-
-                assertEquals(TicketStatus.IN_PROGRESS, ticketToSave.getStatus());
-                assertEquals(agent, ticketToSave.getAssignedTo());
                 assertEquals(1L, response.id());
                 assertEquals(TicketStatus.IN_PROGRESS, response.status());
                 assertEquals(agent.getId(), response.assignedTo().id());
@@ -603,16 +646,16 @@ class TicketServiceTest {
                 TicketHistory statusHistory = histories.get(0);
                 TicketHistory assignmentHistory = histories.get(1);
 
-                assertEquals(ticketToSave, statusHistory.getTicket());
+                assertEquals(updatedTicket, statusHistory.getTicket());
                 assertEquals(TicketHistoryAction.STATUS_CHANGED, statusHistory.getAction());
-                assertEquals(status.name(), statusHistory.getOldValue());
+                assertEquals(TicketStatus.OPEN.name(), statusHistory.getOldValue());
                 assertEquals(TicketStatus.IN_PROGRESS.name(), statusHistory.getNewValue());
                 assertEquals(agent, statusHistory.getPerformedBy());
 
-                assertEquals(ticketToSave, assignmentHistory.getTicket());
+                assertEquals(updatedTicket, assignmentHistory.getTicket());
                 assertEquals(TicketHistoryAction.TICKET_ASSIGNED, assignmentHistory.getAction());
                 assertNull(assignmentHistory.getOldValue());
-                assertEquals(ticketToSave.getAssignedTo().getName(), assignmentHistory.getNewValue());
+                assertEquals(agent.getName(), assignmentHistory.getNewValue());
                 assertEquals(agent, assignmentHistory.getPerformedBy());
 
                 assertNotNull(statusHistory.getCreatedAt());

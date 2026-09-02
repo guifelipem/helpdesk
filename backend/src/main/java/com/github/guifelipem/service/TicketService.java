@@ -181,31 +181,27 @@ public class TicketService {
 
     @Transactional
     public TicketResponse assignToMe(Long ticketId) {
-
-        Ticket ticket = findTicketById(ticketId);
-
-        if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
-            throw new InvalidTicketStatusTransitionException("Chamado finalizado ou fechado não podem ser atribuídos");
-        }
-
-        if (ticket.getAssignedTo() != null) {
-            throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
-        }
-
-        TicketStatus currentStatus = ticket.getStatus();
-
         User agent = authenticatedUserProvider.getAuthenticatedUser();
+        LocalDateTime assignmentTime = LocalDateTime.now();
 
-        ticket.setAssignedTo(agent);
-        ticket.setStatus(TicketStatus.IN_PROGRESS);
-        ticket.setUpdatedAt(LocalDateTime.now());
+        int affectedRows = ticketRepository.assignIfAvailable(ticketId, agent, TicketStatus.OPEN, TicketStatus.IN_PROGRESS, assignmentTime);
 
-        Ticket savedTicket = ticketRepository.save(ticket);
+        if (affectedRows == 0 ) {
+            Ticket ticket = findTicketById(ticketId);
 
-        createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED, currentStatus.name(), ticket.getStatus().name(), agent);
-        createHistory(savedTicket, TicketHistoryAction.TICKET_ASSIGNED, null, agent.getName(), agent);
+            if (ticket.getAssignedTo() != null ) {
+                throw new TicketAlreadyAssignedException("Chamado já está atribuído a um agente");
+            }
 
-        return toResponse(savedTicket);
+            throw new InvalidTicketStatusTransitionException("Apenas chamados em aberto podem ser atribuídos");
+        }
+
+        Ticket ticketUpdated = findTicketById(ticketId);
+
+        createHistory(ticketUpdated, TicketHistoryAction.STATUS_CHANGED, TicketStatus.OPEN.name(), TicketStatus.IN_PROGRESS.name(), agent);
+        createHistory(ticketUpdated, TicketHistoryAction.TICKET_ASSIGNED, null, agent.getName(), agent);
+
+        return toResponse(ticketUpdated);
     }
 
     @Transactional(readOnly = true)
