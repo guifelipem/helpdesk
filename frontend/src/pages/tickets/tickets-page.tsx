@@ -117,46 +117,56 @@ export function TicketsPage() {
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#413b6b]"><Filter className="size-4" /> Filtros</div>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input className="pl-10"
-                        type="search"
-                        placeholder="Buscar por título..."
-                        value={search}
-                        onChange={(event) => {
-                            setSearch(event.target.value);
-                            setPage(0);
-                        }}
-                    /></div>
+                        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <label htmlFor="ticket-search" className="sr-only">Buscar chamados</label>
+                        <Input id="ticket-search" className="pl-10"
+                            type="search"
+                            placeholder="Buscar por título..."
+                            value={search}
+                            onChange={(event) => {
+                                setSearch(event.target.value);
+                                setPage(0);
+                            }}
+                        />
+                    </div>
 
-                    <select
-                        value={status}
-                        onChange={(event) => {
-                            setStatus(event.target.value as TicketStatus | "");
-                            setPage(0);
-                        }}
-                        className="h-11 rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
-                    >
-                        <option value="">Todos os Status</option>
-                        <option value="OPEN">Aberto</option>
-                        <option value="IN_PROGRESS">Em andamento</option>
-                        <option value="WAITING_CLIENT">Aguardando cliente</option>
-                        <option value="RESOLVED">Resolvido</option>
-                        <option value="CLOSED">Fechado</option>
-                    </select>
+                    <div>
+                        <label htmlFor="ticket-status" className="sr-only">Filtrar por status</label>
+                        <select
+                            id="ticket-status"
+                            value={status}
+                            onChange={(event) => {
+                                setStatus(event.target.value as TicketStatus | "");
+                                setPage(0);
+                            }}
+                            className="h-11 w-full rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                        >
+                            <option value="">Todos os status</option>
+                            <option value="OPEN">Aberto</option>
+                            <option value="IN_PROGRESS">Em andamento</option>
+                            <option value="WAITING_CLIENT">Aguardando cliente</option>
+                            <option value="RESOLVED">Resolvido</option>
+                            <option value="CLOSED">Fechado</option>
+                        </select>
+                    </div>
 
-                    <select
-                        value={priority}
-                        onChange={(event) => {
-                            setPriority(event.target.value as TicketPriority | "");
-                            setPage(0);
-                        }}
-                        className="h-11 rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
-                    >
-                        <option value="">Todas as prioridades</option>
-                        <option value="LOW">Baixa</option>
-                        <option value="MEDIUM">Média</option>
-                        <option value="HIGH">Alta</option>
-                    </select>
+                    <div>
+                        <label htmlFor="ticket-priority" className="sr-only">Filtrar por prioridade</label>
+                        <select
+                            id="ticket-priority"
+                            value={priority}
+                            onChange={(event) => {
+                                setPriority(event.target.value as TicketPriority | "");
+                                setPage(0);
+                            }}
+                            className="h-11 w-full rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                        >
+                            <option value="">Todas as prioridades</option>
+                            <option value="LOW">Baixa</option>
+                            <option value="MEDIUM">Média</option>
+                            <option value="HIGH">Alta</option>
+                        </select>
+                    </div>
 
                     <Button
                         type="button"

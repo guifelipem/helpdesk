@@ -68,46 +68,44 @@ export function TicketHistorySection({ ticketId }: TicketHistorySectionProps) {
 
                 {!isLoading && !isError && history.length > 0 && (
                     <div className="relative space-y-6">
-                        <div className="relative space-y-6">
-                            <div className="absolute bottom-2 left-[15px] top-2 w-px bg-[#5c65c0]/20" />
+                        <div className="absolute bottom-2 left-[15px] top-2 w-px bg-[#5c65c0]/20" />
 
-                            {history.map((item) => {
-                                const Icon = getHistoryIcon(item.action);
-                                return (
-                                    <div
-                                        key={item.id}
-                                        className="relative flex gap-4"
-                                    >
-                                        <div className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border border-[#5c65c0]/15 bg-[#ececff] shadow-[0_0_0_4px_white]">
-                                            <Icon className="size-3.5 text-[#5c65c0]" />
-                                        </div>
-
-                                        <div className="min-w-0 flex-1 pb-1">
-                                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                                <p className="font-medium">
-                                                    {getHistoryTitle(item.action)}
-                                                </p>
-
-                                                <time className="text-xs text-muted-foreground">
-                                                    {formatDate(item.createdAt)}
-                                                </time>
-                                            </div>
-
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                {getHistoryDescription(item)}
-                                            </p>
-
-                                            <p className="mt-2 text-xs text-muted-foreground">
-                                                Realizado por{" "}
-                                                <span className="font-medium text-foreground">
-                                                    {item.performedBy.name}
-                                                </span>
-                                            </p>
-                                        </div>
+                        {history.map((item) => {
+                            const Icon = getHistoryIcon(item.action);
+                            return (
+                                <div
+                                    key={item.id}
+                                    className="relative flex gap-4"
+                                >
+                                    <div className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border border-[#5c65c0]/15 bg-[#ececff] shadow-[0_0_0_4px_white]">
+                                        <Icon className="size-3.5 text-[#5c65c0]" />
                                     </div>
-                                )
-                            })}
-                        </div>
+
+                                    <div className="min-w-0 flex-1 pb-1">
+                                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                            <p className="font-medium">
+                                                {getHistoryTitle(item.action)}
+                                            </p>
+
+                                            <time dateTime={item.createdAt} className="text-xs text-muted-foreground">
+                                                {formatDate(item.createdAt)}
+                                            </time>
+                                        </div>
+
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            {getHistoryDescription(item)}
+                                        </p>
+
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Realizado por{" "}
+                                            <span className="font-medium text-foreground">
+                                                {item.performedBy.name}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
             </CardContent>

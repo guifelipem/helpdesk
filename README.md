@@ -127,20 +127,35 @@ helpdesk/
 
 ## Backend
 
+Inicie o PostgreSQL e defina as variáveis esperadas pela aplicação:
+
 ```bash
+docker compose up -d postgres
 cd backend
 
+export DB_PASSWORD=helpdesk_pass
+export JWT_SECRET=uma-chave-local-com-pelo-menos-32-caracteres
 ./mvnw spring-boot:run
 ```
+
+No PowerShell, use `$env:DB_PASSWORD="helpdesk_pass"` e
+`$env:JWT_SECRET="uma-chave-local-com-pelo-menos-32-caracteres"`.
+
+Após iniciar o backend, o Swagger UI fica disponível em
+`http://localhost:8080/swagger-ui/index.html`.
 
 ## Frontend
 
 ```bash
 cd frontend
 
-npm install
+npm ci
 npm run dev
 ```
+
+Por padrão, o frontend acessa `http://localhost:8080/api`. Para usar outra URL,
+copie `frontend/.env.example` para `frontend/.env.local` e ajuste
+`VITE_API_URL`.
 
 ---
 

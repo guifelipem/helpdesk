@@ -5,7 +5,7 @@ import type { TicketHistoryResponse } from "../types/ticket-history-types";
 export async function findTicketHistory(
 	ticketId: number
 ): Promise<TicketHistoryResponse[]> {
-	const response = await api.get(
+	const response = await api.get<TicketHistoryResponse[]>(
 		`/tickets/${ticketId}/history`
 	);
 

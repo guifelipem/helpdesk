@@ -14,9 +14,9 @@ export function useAuthMe() {
         queryKey: ["auth", "me"],
         queryFn: async () => {
             try {
-                const user = await getMe();
-                setUser(user);
-                return user;
+                const authenticatedUser = await getMe();
+                setUser(authenticatedUser);
+                return authenticatedUser;
             } catch (error) {
                 if (axios.isAxiosError(error) && error.response?.status === 401) {
                     logout();

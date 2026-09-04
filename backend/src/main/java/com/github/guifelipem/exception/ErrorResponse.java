@@ -1,7 +1,8 @@
 package com.github.guifelipem.exception;
 
-import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.time.LocalDateTime;
 
 @Schema(description = "Erro tratado pela API")
 public record ErrorResponse(
