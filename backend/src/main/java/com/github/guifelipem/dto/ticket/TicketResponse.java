@@ -4,7 +4,9 @@ import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 
 import java.time.LocalDateTime;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Dados completos de um chamado")
 public record TicketResponse(
 
         Long id,
@@ -13,7 +15,7 @@ public record TicketResponse(
         TicketStatus status,
         TicketPriority priority,
         UserSummaryResponse createdBy,
-        UserSummaryResponse assignedTo,
+        @Schema(description = "Responsável atual; nulo enquanto o chamado não foi assumido", nullable = true) UserSummaryResponse assignedTo,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}
