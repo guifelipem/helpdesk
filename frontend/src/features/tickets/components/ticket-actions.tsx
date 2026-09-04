@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 
-import { useAssignTickets, useUpdateTicketStatus, useCloseTicket } from "../hooks/use-tickets";
+import { useAssignTicket, useUpdateTicketStatus, useCloseTicket } from "../hooks/use-tickets";
 import type { Ticket, TicketStatus } from "../types/ticket.types";
 
 type TicketActionsProps = { ticket: Ticket; };
@@ -10,7 +10,7 @@ type TicketActionsProps = { ticket: Ticket; };
 export function TicketActions({ ticket }: TicketActionsProps) {
     const user = useAuthStore((state) => state.user);
 
-    const assignTicket = useAssignTickets();
+    const assignTicket = useAssignTicket();
     const updateStatus = useUpdateTicketStatus();
     const closeTicket = useCloseTicket();
 

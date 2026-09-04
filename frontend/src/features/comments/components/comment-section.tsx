@@ -152,6 +152,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                             value={message}
                             onChange={(event) => setMessage(event.target.value)}
                             className="min-h-20 max-h-40 resize-y bg-[#f8f8ff]"
+                            aria-describedby={createCommentMutation.error ? "comment-error" : undefined}
                         />
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -178,7 +179,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                         </div>
 
                         {createCommentMutation.error && (
-                            <p className="text-sm text-destructive">{createCommentErrorMessage}</p>
+                            <p id="comment-error" role="alert" className="text-sm text-destructive">{createCommentErrorMessage}</p>
                         )}
                     </div>
                 )}

@@ -74,10 +74,19 @@ export function LoginPage() {
               <Label htmlFor="email">E-mail</Label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="voce@email.com" className="pl-10" {...form.register("email")} />
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="voce@email.com"
+                  className="pl-10"
+                  aria-invalid={!!form.formState.errors.email}
+                  aria-describedby={form.formState.errors.email ? "email-error" : undefined}
+                  {...form.register("email")}
+                />
               </div>
               {form.formState.errors.email && (
-                <p className="text-sm text-destructive">
+                <p id="email-error" role="alert" className="text-sm text-destructive">
                   {form.formState.errors.email.message}
                 </p>
               )}
@@ -87,17 +96,26 @@ export function LoginPage() {
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="password" type="password" placeholder="Sua senha" className="pl-10" {...form.register("password")} />
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="Sua senha"
+                  className="pl-10"
+                  aria-invalid={!!form.formState.errors.password}
+                  aria-describedby={form.formState.errors.password ? "password-error" : undefined}
+                  {...form.register("password")}
+                />
               </div>
               {form.formState.errors.password && (
-                <p className="text-sm text-destructive">
+                <p id="password-error" role="alert" className="text-sm text-destructive">
                   {form.formState.errors.password.message}
                 </p>
               )}
             </div>
 
             {loginMutation.isError && (
-              <p className="text-sm text-destructive">{errorMessage}</p>
+              <p role="alert" className="text-sm text-destructive">{errorMessage}</p>
             )}
 
             <Button

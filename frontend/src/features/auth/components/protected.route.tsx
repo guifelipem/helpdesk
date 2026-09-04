@@ -3,7 +3,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { ErrorState } from "@/shared/components/error-state";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 import { useAuthStore } from "../store/auth.store";
-import { useAuthMe } from "../hooks/useAuthMe";
+import { useAuthMe } from "../hooks/use-auth-me";
 
 export function ProtectedRoute() {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -12,7 +12,7 @@ export function ProtectedRoute() {
     const { isPending, isError, error, refetch, isFetching } = useAuthMe();
 
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace />
+        return <Navigate to="/login" replace />;
     }
 
     if (!user && isPending) {
@@ -20,18 +20,18 @@ export function ProtectedRoute() {
     }
 
     if (!user && isError) {
-    return (
-        <ErrorState
-            title="Não foi possível carregar sua sessão"
-            description={getApiErrorMessage(
-                error,
-                "Não foi possível conectar ao servidor. Tente novamente."
-            )}
-            onRetry={() => refetch()}
-            isRetrying={isFetching}
-        />
-    );
-}
+        return (
+            <ErrorState
+                title="Não foi possível carregar sua sessão"
+                description={getApiErrorMessage(
+                    error,
+                    "Não foi possível conectar ao servidor. Tente novamente."
+                )}
+                onRetry={() => refetch()}
+                isRetrying={isFetching}
+            />
+        );
+    }
 
-    return <Outlet />
+    return <Outlet />;
 }

@@ -14,8 +14,8 @@ export function ErrorState({
     isRetrying = false,
 }: ErrorStateProps) {
     return (
-        <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center">
-            <h2 className="text-lg font-semibold"> 
+        <div role="alert" className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center">
+            <h2 className="text-lg font-semibold">
                 {title}
             </h2>
 

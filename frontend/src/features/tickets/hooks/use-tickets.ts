@@ -53,7 +53,7 @@ export function useCreateTicket() {
     });
 }
 
-export function useAssignTickets() {
+export function useAssignTicket() {
     const queryClient = useQueryClient();
 
     return useMutation({

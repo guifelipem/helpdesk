@@ -1,11 +1,10 @@
-import { Headphones, LayoutDashboard, LogOut, Ticket, UserRound } from "lucide-react";
+import { Headphones, LogOut, Ticket, UserRound } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/auth.store";
 
 export function AppLayout() {
     const { user, logout } = useAuthStore();
-    const canSeeDashboard = useAuthStore((state) => state.canAccessDashboard());
 
     const navClass = ({ isActive }: { isActive: boolean }) =>
         `group flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all ${
@@ -39,12 +38,6 @@ export function AppLayout() {
                         Chamados
                     </NavLink>
 
-                    {canSeeDashboard && (
-                        <NavLink to="/dashboard" className={navClass}>
-                            <LayoutDashboard className="size-4 text-[#6f95ff]" />
-                            Dashboard
-                        </NavLink>
-                    )}
                 </nav>
 
                 <div className="absolute bottom-6 left-5 right-5 hidden rounded-2xl border border-white/10 bg-white/6 p-3 lg:block">
