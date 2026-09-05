@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Novo status solicitado para o chamado")
 public record UpdateTicketStatusRequest(
-        @Schema(description = "Novo status. CLOSED não é aceito aqui; o fechamento é confirmado pelo cliente.", example = "WAITING_CLIENT")
+        @Schema(description = "Novo status solicitado por uma ação válida do suporte. Transições do cliente possuem endpoints específicos.", example = "WAITING_CLIENT")
         @NotNull
         TicketStatus status
 ) {

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 public class CommentServiceTest {
@@ -93,6 +94,30 @@ public class CommentServiceTest {
                 assertEquals(user.getId(), response.author().id());
                 assertEquals(user.getRole(), response.author().role());
                 assertNotNull(response.createdAt());
+        }
+
+        @Test
+        void shouldNotChangeWaitingClientStatusWhenClientComments() {
+                User client = User.builder()
+                        .id(1L)
+                        .name("Cliente")
+                        .role(UserRole.CLIENT)
+                        .build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(client)
+                        .assignedTo(User.builder().id(2L).build())
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(commentRepository.save(any(Comment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+                commentService.create(1L, new CreateCommentRequest("Informações solicitadas", false));
+
+                assertEquals(TicketStatus.WAITING_CLIENT, ticket.getStatus());
+                verify(ticketRepository, never()).save(any(Ticket.class));
         }
 
         @Test

@@ -137,7 +137,7 @@ public class TicketService {
             throw new ForbiddenException("O fechamento do chamado deve ser confirmado pelo cliente");
         }
 
-        if (!currentStatus.canTransitionTo(newStatus)) {
+        if (!currentStatus.canSupportTransitionTo(newStatus)) {
             throw new InvalidTicketStatusTransitionException(
                     "Transição de status inválida: " + currentStatus + " -> " + newStatus
             );
@@ -160,11 +160,12 @@ public class TicketService {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
-        if (!ticket.getCreatedBy().getId().equals(user.getId())) {
+        if (user.getRole() != UserRole.CLIENT
+                || !ticket.getCreatedBy().getId().equals(user.getId())) {
             throw new ForbiddenException("Você não tem permissão para fechar este chamado");
         }
 
-        if (ticket.getStatus() != TicketStatus.RESOLVED) {
+        if (!ticket.getStatus().canClientTransitionTo(TicketStatus.CLOSED)) {
             throw new InvalidTicketStatusTransitionException("Apenas chamados resolvidos podem ser fechados");
         }
 
@@ -191,7 +192,7 @@ public class TicketService {
             throw new ForbiddenException("Somente o cliente dono do chamado pode rejeitar a resolução");
         }
 
-        if (ticket.getStatus() != TicketStatus.RESOLVED) {
+        if (!ticket.getStatus().canClientTransitionTo(TicketStatus.IN_PROGRESS)) {
             throw new InvalidTicketStatusTransitionException(
                     "Apenas chamados resolvidos podem ter a resolução rejeitada"
             );
@@ -208,6 +209,47 @@ public class TicketService {
                 TicketStatus.RESOLVED.name(),
                 TicketStatus.IN_PROGRESS.name(),
                 request.reason(),
+                user
+        );
+
+        return toResponse(savedTicket);
+    }
+
+    @Transactional
+    public TicketResponse sendToAgent(Long ticketId) {
+
+        Ticket ticket = findTicketById(ticketId);
+        User user = authenticatedUserProvider.getAuthenticatedUser();
+
+        if (user.getRole() != UserRole.CLIENT
+                || !ticket.getCreatedBy().getId().equals(user.getId())) {
+            throw new ForbiddenException("Somente o cliente dono do chamado pode enviá-lo para análise do suporte");
+        }
+
+        if (ticket.getAssignedTo() == null) {
+            throw new InvalidTicketStatusTransitionException(
+                    "Um chamado sem responsável não pode aguardar análise do suporte"
+            );
+        }
+
+        TicketStatus currentStatus = ticket.getStatus();
+
+        if (!currentStatus.canClientTransitionTo(TicketStatus.WAITING_AGENT)) {
+            throw new InvalidTicketStatusTransitionException(
+                    "Apenas chamados aguardando o cliente podem ser enviados para análise do suporte"
+            );
+        }
+
+        ticket.setStatus(TicketStatus.WAITING_AGENT);
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        createHistory(
+                savedTicket,
+                TicketHistoryAction.STATUS_CHANGED,
+                currentStatus.name(),
+                TicketStatus.WAITING_AGENT.name(),
                 user
         );
 

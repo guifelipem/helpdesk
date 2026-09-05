@@ -19,6 +19,10 @@ const statusMap: Record<
         label: "Aguardando cliente",
         className: "border border-amber-200 bg-amber-100 text-amber-800",
     },
+    WAITING_AGENT: {
+        label: "Aguardando suporte",
+        className: "border border-sky-200 bg-sky-100 text-sky-800",
+    },
     RESOLVED: {
         label: "Resolvido",
         className: "border border-emerald-200 bg-emerald-100 text-emerald-700",
