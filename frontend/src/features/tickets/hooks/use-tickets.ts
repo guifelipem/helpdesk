@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 
-import { assignTicketToMe, closeTicket, createTicket, findAllTickets, findMyTickets, findTicketById, updateTicketStatus } from "../api/ticket.api";
+import { assignTicketToMe, closeTicket, createTicket, findAllTickets, findMyTickets, findTicketById, rejectTicketResolution, updateTicketStatus } from "../api/ticket.api";
 import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
 import { ticketQueryKeys } from "../constants/ticket-query-keys";
 import { ticketHistoryQueryKeys } from "@/features/history/constants/ticket-history-query-keys";
@@ -100,6 +100,24 @@ export function useCloseTicket() {
 
     return useMutation({
         mutationFn: closeTicket,
+
+        onSuccess: (ticket) => {
+            queryClient.invalidateQueries({
+                queryKey: ticketQueryKeys.all,
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: ticketHistoryQueryKeys.history(ticket.id),
+            });
+        },
+    });
+}
+
+export function useRejectTicketResolution() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: rejectTicketResolution,
 
         onSuccess: (ticket) => {
             queryClient.invalidateQueries({

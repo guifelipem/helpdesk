@@ -11,6 +11,7 @@ public record TicketHistoryResponse(
         TicketHistoryAction action,
         String oldValue,
         String newValue,
+        String details,
         UserSummaryResponse performedBy,
         LocalDateTime createdAt
 ) {}

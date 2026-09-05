@@ -1,20 +1,29 @@
+import { useState, type FormEvent } from "react";
+
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 
-import { useAssignTicket, useUpdateTicketStatus, useCloseTicket } from "../hooks/use-tickets";
+import { useAssignTicket, useUpdateTicketStatus, useCloseTicket, useRejectTicketResolution } from "../hooks/use-tickets";
 import type { Ticket, TicketStatus } from "../types/ticket.types";
+import { Undo2 } from "lucide-react";
 
 type TicketActionsProps = { ticket: Ticket; };
 
 export function TicketActions({ ticket }: TicketActionsProps) {
+    const [isRejectingResolution, setIsRejectingResolution] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState("");
+
     const user = useAuthStore((state) => state.user);
 
     const assignTicket = useAssignTicket();
     const updateStatus = useUpdateTicketStatus();
     const closeTicket = useCloseTicket();
+    const rejectResolution = useRejectTicketResolution();
 
-    const mutationError = assignTicket.error ?? updateStatus.error ?? closeTicket.error;
+    const mutationError = assignTicket.error ?? updateStatus.error ?? closeTicket.error ?? rejectResolution.error;
 
     const errorMessage = getApiErrorMessage(
         mutationError,
@@ -41,7 +50,34 @@ export function TicketActions({ ticket }: TicketActionsProps) {
         closeTicket.mutate(ticket.id);
     }
 
-    const isPending = assignTicket.isPending || updateStatus.isPending || closeTicket.isPending;
+    function handleRejectResolution(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        const reason = rejectionReason.trim();
+
+        if (!reason) return;
+
+        rejectResolution.mutate(
+            {
+                id: ticket.id,
+                data: { reason },
+            },
+            {
+                onSuccess: () => {
+                    setRejectionReason("");
+                    setIsRejectingResolution(false);
+                },
+            }
+        );
+    }
+
+    function handleCancelRejection() {
+        setRejectionReason("");
+        setIsRejectingResolution(false);
+        rejectResolution.reset();
+    }
+
+    const isPending = assignTicket.isPending || updateStatus.isPending || closeTicket.isPending || rejectResolution.isPending;
 
     if (isClient) {
         if (ticket.status !== "RESOLVED" || !isTicketOwner) {
@@ -49,10 +85,20 @@ export function TicketActions({ ticket }: TicketActionsProps) {
         }
 
         return (
-            <div className="space-y-2">
-                <Button onClick={handleClose} disabled={closeTicket.isPending}>
-                    {closeTicket.isPending ? "Fechando..." : "Confirmar resolução"}
-                </Button>
+            <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                    <Button onClick={handleClose} disabled={isPending}>
+                        {closeTicket.isPending ? "Fechando..." : "Confirmar resolução"}
+                    </Button>
+
+                    <Button
+                        variant="destructive"
+                        onClick={() => setIsRejectingResolution(true)}
+                        disabled={isPending || isRejectingResolution}
+                    >
+                        <Undo2 /> Rejeitar resolução
+                    </Button>
+                </div>
 
                 {closeTicket.isError && (
                     <p className="text-sm text-destructive">
@@ -61,6 +107,61 @@ export function TicketActions({ ticket }: TicketActionsProps) {
                             "Não foi possível fechar o chamado. Tente novamente."
                         )}
                     </p>
+                )}
+
+                {isRejectingResolution && (
+                    <form
+                        onSubmit={handleRejectResolution}
+                        className="max-w-2xl space-y-3 rounded-xl border border-red-200 bg-white/95 p-4 text-[#301c41]"
+                    >
+                        <div className="space-y-1">
+                            <Label htmlFor="rejection-reason">Por que a resolução não resolveu o problema?</Label>
+                            <p className="text-xs text-muted-foreground">
+                                A justificativa será registrada no histórico e o chamado voltará para atendimento.
+                            </p>
+                        </div>
+
+                        <Textarea
+                            id="rejection-reason"
+                            autoFocus
+                            required
+                            placeholder="Ex: O problema ainda acontece após seguir as orientações."
+                            value={rejectionReason}
+                            onChange={(event) => setRejectionReason(event.target.value)}
+                            disabled={rejectResolution.isPending}
+                            className="min-h-24 resize-y"
+                            aria-describedby={rejectResolution.isError ? "rejection-error" : undefined}
+                        />
+
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                type="submit"
+                                variant="destructive"
+                                disabled={rejectResolution.isPending || !rejectionReason.trim()}
+                            >
+                                <Undo2 />
+                                {rejectResolution.isPending ? "Rejeitando..." : "Confirmar rejeição"}
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleCancelRejection}
+                                disabled={rejectResolution.isPending}
+                            >
+                                Cancelar
+                            </Button>
+                        </div>
+
+                        {rejectResolution.isError && (
+                            <p id="rejection-error" role="alert" className="text-sm text-destructive">
+                                {getApiErrorMessage(
+                                    rejectResolution.error,
+                                    "Não foi possível rejeitar a resolução. Tente novamente."
+                                )}
+                            </p>
+                        )}
+                    </form>
                 )}
             </div>
         );

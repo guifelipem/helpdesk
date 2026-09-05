@@ -3,6 +3,7 @@ package com.github.guifelipem.service;
 import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
+import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
@@ -180,6 +181,40 @@ public class TicketService {
     }
 
     @Transactional
+    public TicketResponse rejectResolution(Long ticketId, RejectResolutionRequest request) {
+
+        Ticket ticket = findTicketById(ticketId);
+        User user = authenticatedUserProvider.getAuthenticatedUser();
+
+        if (user.getRole() != UserRole.CLIENT
+                || !ticket.getCreatedBy().getId().equals(user.getId())) {
+            throw new ForbiddenException("Somente o cliente dono do chamado pode rejeitar a resolução");
+        }
+
+        if (ticket.getStatus() != TicketStatus.RESOLVED) {
+            throw new InvalidTicketStatusTransitionException(
+                    "Apenas chamados resolvidos podem ter a resolução rejeitada"
+            );
+        }
+
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        createHistory(
+                savedTicket,
+                TicketHistoryAction.RESOLUTION_REJECTED,
+                TicketStatus.RESOLVED.name(),
+                TicketStatus.IN_PROGRESS.name(),
+                request.reason(),
+                user
+        );
+
+        return toResponse(savedTicket);
+    }
+
+    @Transactional
     public TicketResponse assignToMe(Long ticketId) {
         User agent = authenticatedUserProvider.getAuthenticatedUser();
         LocalDateTime assignmentTime = LocalDateTime.now();
@@ -252,11 +287,18 @@ public class TicketService {
 
     private void createHistory(Ticket ticket, TicketHistoryAction action, String oldValue, String newValue, User performedBy) {
 
+        createHistory(ticket, action, oldValue, newValue, null, performedBy);
+    }
+
+    private void createHistory(Ticket ticket, TicketHistoryAction action, String oldValue, String newValue,
+                               String details, User performedBy) {
+
         TicketHistory history = TicketHistory.builder()
                 .ticket(ticket)
                 .action(action)
                 .oldValue(oldValue)
                 .newValue(newValue)
+                .details(details)
                 .performedBy(performedBy)
                 .createdAt(LocalDateTime.now())
                 .build();

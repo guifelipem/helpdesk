@@ -2,6 +2,7 @@ package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
+import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.entity.Ticket;
@@ -479,6 +480,128 @@ class TicketServiceTest {
                 assertEquals(TicketStatus.CLOSED.name(), historyToSave.getNewValue());
                 assertEquals(user, historyToSave.getPerformedBy());
                 assertNotNull(historyToSave.getCreatedAt());
+        }
+
+        @Test
+        void shouldRejectResolutionSuccessfully() {
+                User client = User.builder().id(1L).name("Cliente").role(UserRole.CLIENT).build();
+                User agent = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .createdBy(client)
+                        .assignedTo(agent)
+                        .build();
+                RejectResolutionRequest request = new RejectResolutionRequest("O problema ainda acontece.");
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.rejectResolution(1L, request);
+
+                assertEquals(TicketStatus.IN_PROGRESS, response.status());
+                assertEquals(agent.getId(), response.assignedTo().id());
+                assertEquals(TicketStatus.IN_PROGRESS, ticket.getStatus());
+                assertSame(agent, ticket.getAssignedTo());
+                assertNotNull(ticket.getUpdatedAt());
+
+                ArgumentCaptor<TicketHistory> historyCaptor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+
+                TicketHistory history = historyCaptor.getValue();
+                assertEquals(TicketHistoryAction.RESOLUTION_REJECTED, history.getAction());
+                assertEquals(TicketStatus.RESOLVED.name(), history.getOldValue());
+                assertEquals(TicketStatus.IN_PROGRESS.name(), history.getNewValue());
+                assertEquals(request.reason(), history.getDetails());
+                assertSame(client, history.getPerformedBy());
+                assertNotNull(history.getCreatedAt());
+        }
+
+        @Test
+        void shouldRejectResolutionRejectionByClientWhoDoesNotOwnTicket() {
+                User owner = User.builder().id(1L).role(UserRole.CLIENT).build();
+                User anotherClient = User.builder().id(2L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .createdBy(owner)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherClient);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                assertEquals("Somente o cliente dono do chamado pode rejeitar a resolução", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
+        }
+
+        @Test
+        void shouldRejectResolutionRejectionByNonClientEvenWhenTicketOwner() {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .createdBy(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+
+                assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldRejectResolutionRejectionWhenTicketIsNotResolved() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.IN_PROGRESS)
+                        .createdBy(client)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                InvalidTicketStatusTransitionException exception = assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                assertEquals("Apenas chamados resolvidos podem ter a resolução rejeitada", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldNotReopenClosedTicketThroughResolutionRejection() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.CLOSED)
+                        .createdBy(client)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                assertEquals(TicketStatus.CLOSED, ticket.getStatus());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
         }
 
         @Test

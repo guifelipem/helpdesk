@@ -3,6 +3,7 @@ import { api } from "@/shared/api/client";
 import type { Ticket } from "../types/ticket.types";
 import type { CreateTicketRequest } from "../types/create-ticket-request";
 import type { UpdateTicketStatusRequest } from "../types/update-ticket-status-request";
+import type { RejectResolutionRequest } from "../types/reject-resolution-request";
 import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
 import type { PageResponse } from "@/shared/types/page-response";
 
@@ -34,6 +35,17 @@ export async function updateTicketStatus({
 
 export async function closeTicket(id: number) {
         const response = await api.patch<Ticket>(`/tickets/${id}/close`);
+        return response.data;
+}
+
+export async function rejectTicketResolution({
+        id,
+        data,
+}: {
+        id: number;
+        data: RejectResolutionRequest;
+}): Promise<Ticket> {
+        const response = await api.post<Ticket>(`/tickets/${id}/reject-resolution`, data);
         return response.data;
 }
 
