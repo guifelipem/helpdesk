@@ -26,13 +26,13 @@ export function TicketCard({ ticket }: TicketCardProps) {
     const isClientWaiting = user?.role === "CLIENT" && ticket.status === "WAITING_CLIENT";
 
     return (
-        <Card className="transition-all duration-300 hover:-translate-y-1 hover:border-[#6f95ff]/25 hover:shadow-[0_22px_55px_-28px_#413b6b80]">
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_22px_55px_-28px_#4794b880]">
             <CardHeader>
                 <div className="mb-2 flex items-center justify-between">
-                    <div className="flex size-9 items-center justify-center rounded-xl bg-[#ececff] text-[#5c65c0]"><TicketIcon className="size-4" /></div>
-                    <span className="text-xs font-bold tracking-wider text-[#413b6b]/45">#{ticket.id}</span>
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary-strong"><TicketIcon className="size-4" /></div>
+                    <span className="text-xs font-bold tracking-wider text-muted-foreground">#{ticket.id}</span>
                 </div>
-                <CardTitle className="text-lg font-bold tracking-tight text-[#301c41]">{ticket.title}</CardTitle>
+                <CardTitle className="text-lg font-bold tracking-tight text-foreground">{ticket.title}</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-4">
@@ -47,13 +47,13 @@ export function TicketCard({ ticket }: TicketCardProps) {
                 </div>
 
                 {ticket.status === "WAITING_AGENT" && (
-                    <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
+                    <p className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-900 dark:border-sky-700 dark:bg-sky-950/55 dark:text-sky-200">
                         O cliente já respondeu. Este chamado precisa ser retomado pelo suporte.
                     </p>
                 )}
 
                 {isClientWaiting && (
-                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                    <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-700 dark:bg-amber-950/55 dark:text-amber-200">
                         O Suporte já respondeu. Este chamado precisa ser respondido por você.
                     </p>
                 )}
@@ -64,8 +64,8 @@ export function TicketCard({ ticket }: TicketCardProps) {
                 </p>
             </CardContent>
 
-            <CardFooter className="justify-end border-[#413b6b]/8 bg-[#f8f8ff]">
-                <Button asChild variant="ghost" size="sm" className="text-[#5c65c0]">
+            <CardFooter className="justify-end border-border bg-muted/45">
+                <Button asChild variant="ghost" size="sm" className="text-primary-strong">
                     <Link to={`/tickets/${ticket.id}`}>Ver detalhes <ArrowUpRight /></Link>
                 </Button>
             </CardFooter>

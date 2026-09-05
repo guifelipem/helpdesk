@@ -76,8 +76,8 @@ export function TicketsPage() {
 
     if (!isPending && isClient && (!tickets || tickets.length === 0)) {
         return (
-            <div className="rounded-3xl border border-dashed border-[#5c65c0]/25 bg-white/70 px-6 py-16 text-center shadow-sm">
-                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[#ececff] text-[#5c65c0]"><TicketIcon /></div>
+            <div className="rounded-3xl border border-dashed border-primary/35 bg-card/70 px-6 py-16 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary-strong"><TicketIcon /></div>
                 <h1 className="text-2xl font-bold tracking-tight">Nenhum chamado por aqui</h1>
                 <p className="mb-6 mt-2 text-muted-foreground">Você ainda não possui chamados.</p>
 
@@ -90,11 +90,11 @@ export function TicketsPage() {
 
     return (
         <div className="space-y-7">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#301c41] via-[#413b6b] to-[#5c65c0] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#301c41] sm:px-8">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#030607] sm:px-8">
                 <div className="absolute -right-12 -top-20 size-64 rounded-full border-[32px] border-white/5" />
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#aebfff]"><Sparkles className="size-3.5" /> Central de atendimento</div>
+                    <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75"><Sparkles className="size-3.5" /> Central de atendimento</div>
                     <h1 className="text-3xl font-bold tracking-tight">Seus chamados</h1>
                     <p className="mt-2 max-w-xl text-sm text-white/65">
                         {isClient
@@ -105,7 +105,7 @@ export function TicketsPage() {
                 </div>
 
                 {isClient && (
-                    <Button asChild className="bg-[#6f95ff] text-white shadow-[#1c0b2b]/40 hover:bg-[#83a4ff]">
+                    <Button asChild className="bg-primary text-primary-foreground shadow-black/30 hover:bg-[#64acd0]">
                         <Link to="/tickets/new"><Plus /> Novo chamado</Link>
                     </Button>
                 )}
@@ -113,8 +113,8 @@ export function TicketsPage() {
             </div>
 
             {!isClient && (
-                <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-[0_15px_40px_-30px_#301c41] backdrop-blur-sm">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#413b6b]"><Filter className="size-4" /> Filtros</div>
+                <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-[0_15px_40px_-30px_#4794b866] backdrop-blur-sm">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><Filter className="size-4 text-primary-strong" /> Filtros</div>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <div className="relative">
                         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -139,7 +139,7 @@ export function TicketsPage() {
                                 setStatus(event.target.value as TicketStatus | "");
                                 setPage(0);
                             }}
-                            className="h-11 w-full rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                            className="h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
                         >
                             <option value="">Todos os status</option>
                             <option value="OPEN">Aberto</option>
@@ -160,7 +160,7 @@ export function TicketsPage() {
                                 setPriority(event.target.value as TicketPriority | "");
                                 setPage(0);
                             }}
-                            className="h-11 w-full rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                            className="h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
                         >
                             <option value="">Todas as prioridades</option>
                             <option value="LOW">Baixa</option>
@@ -192,7 +192,7 @@ export function TicketsPage() {
             {isPending ? (
                 <TicketListSkeleton />
             ) : !tickets || tickets.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#5c65c0]/25 bg-white/70 py-12 text-center text-muted-foreground">Nenhum chamado corresponde aos filtros selecionados.</div>
+                <div className="rounded-2xl border border-dashed border-primary/35 bg-card/70 py-12 text-center text-muted-foreground">Nenhum chamado corresponde aos filtros selecionados.</div>
             ) : (
                 <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                     {tickets?.map((ticket) => (
@@ -202,7 +202,7 @@ export function TicketsPage() {
             )}
 
             {!isClient && pageData && pageData.totalPages > 1 && (
-                <div className="flex items-center justify-between rounded-2xl border border-white bg-white/70 p-3 shadow-sm">
+                <div className="flex items-center justify-between rounded-2xl border border-border bg-card/70 p-3 shadow-sm">
                     <Button
                         variant="outline"
                         disabled={page === 0 || allTicketsQuery.isFetching}

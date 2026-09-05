@@ -66,7 +66,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                 <Label htmlFor="priority">Prioridade</Label>
                 <select
                     id="priority"
-                    className="h-11 w-full rounded-xl border border-input bg-white/80 px-3.5 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                    className="h-11 w-full rounded-xl border border-input bg-card/80 px-3.5 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
                     aria-invalid={!!errors.priority}
                     aria-describedby={errors.priority ? "priority-error" : undefined}
                     {...register("priority")}

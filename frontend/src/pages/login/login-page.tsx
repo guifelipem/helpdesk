@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Headphones, LockKeyhole, Mail } from "lucide-react";
+import { ThemeToggle } from "@/features/theme/components/theme-toggle";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -56,12 +57,13 @@ export function LoginPage() {
 
   return (
     <main className="auth-background relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      <ThemeToggle className="absolute right-4 top-4 z-10 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white" />
       <div className="absolute left-[8%] top-[12%] size-56 rounded-full border border-white/10" />
       <div className="absolute bottom-[8%] right-[7%] size-80 rounded-full border border-white/8" />
-      <Card className="relative w-full max-w-md border-white/20 bg-white/96 px-2 py-2 shadow-[0_30px_80px_-25px_#00000090] backdrop-blur-xl">
+      <Card className="relative w-full max-w-md border-white/20 bg-card/96 px-2 py-2 shadow-[0_30px_80px_-25px_#00000090] backdrop-blur-xl">
         <CardHeader className="pb-2 text-center">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6f95ff] to-[#5c65c0] text-white shadow-lg shadow-[#5c65c0]/25"><Headphones className="size-6" /></div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#5c65c0]">Helpdesk</p>
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-[#030607] shadow-lg shadow-primary/25 dark:text-white"><Headphones className="size-6" /></div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary-strong">Helpdesk</p>
           <CardTitle className="mt-2 text-2xl font-bold tracking-tight">Bem-vindo de volta</CardTitle>
           <CardDescription>
             Acesse sua conta para gerenciar chamados.

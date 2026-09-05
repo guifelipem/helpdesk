@@ -26,8 +26,8 @@ export function CreateTicketPage() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-3xl bg-gradient-to-r from-[#301c41] to-[#413b6b] px-6 py-7 text-white shadow-[0_20px_50px_-30px_#301c41]">
-                <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-white/10 text-[#aebfff]"><PlusCircle className="size-5" /></div>
+            <div className="rounded-3xl bg-gradient-to-r from-[#272e62] to-[#373384] px-6 py-7 text-white shadow-[0_20px_50px_-30px_#030607]">
+                <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-white/10 text-white/80"><PlusCircle className="size-5" /></div>
                 <h1 className="text-3xl font-bold tracking-tight">
                     Novo chamado
                 </h1>
