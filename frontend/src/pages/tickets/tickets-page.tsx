@@ -145,6 +145,7 @@ export function TicketsPage() {
                             <option value="OPEN">Aberto</option>
                             <option value="IN_PROGRESS">Em andamento</option>
                             <option value="WAITING_CLIENT">Aguardando cliente</option>
+                            <option value="WAITING_AGENT">Aguardando suporte</option>
                             <option value="RESOLVED">Resolvido</option>
                             <option value="CLOSED">Fechado</option>
                         </select>

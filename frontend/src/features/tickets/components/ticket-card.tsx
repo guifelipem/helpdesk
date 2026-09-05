@@ -7,6 +7,7 @@ import { formatDate } from "@/shared/utils/format-date";
 import { TicketPriorityBadge } from "./ticket-priority-badge";
 import { TicketStatusBadge } from "./ticket-status-badge";
 import { ArrowUpRight, CalendarDays, Ticket as TicketIcon } from "lucide-react";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 
 type TicketCardProps = {
     ticket: Ticket;
@@ -21,6 +22,9 @@ function truncateText(text: string, maxLength = 120) {
 }
 
 export function TicketCard({ ticket }: TicketCardProps) {
+    const user = useAuthStore((state) => state.user);
+    const isClientWaiting = user?.role === "CLIENT" && ticket.status === "WAITING_CLIENT";
+
     return (
         <Card className="transition-all duration-300 hover:-translate-y-1 hover:border-[#6f95ff]/25 hover:shadow-[0_22px_55px_-28px_#413b6b80]">
             <CardHeader>
@@ -41,6 +45,18 @@ export function TicketCard({ ticket }: TicketCardProps) {
 
                     <TicketPriorityBadge priority={ticket.priority} />
                 </div>
+
+                {ticket.status === "WAITING_AGENT" && (
+                    <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
+                        O cliente já respondeu. Este chamado precisa ser retomado pelo suporte.
+                    </p>
+                )}
+
+                {isClientWaiting && (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                        O Suporte já respondeu. Este chamado precisa ser respondido por você.
+                    </p>
+                )}
 
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <CalendarDays className="size-3.5" /> Criado em{" "}

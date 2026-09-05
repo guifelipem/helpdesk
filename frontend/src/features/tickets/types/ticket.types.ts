@@ -4,6 +4,7 @@ export type TicketStatus =
     | "OPEN"
     | "IN_PROGRESS"
     | "WAITING_CLIENT"
+    | "WAITING_AGENT"
     | "RESOLVED"
     | "CLOSED";
 

@@ -12,6 +12,7 @@ const statusLabels: Record<string, string> = {
     OPEN: "Aberto",
     IN_PROGRESS: "Em andamento",
     WAITING_CLIENT: "Aguardando cliente",
+    WAITING_AGENT: "Aguardando suporte",
     RESOLVED: "Resolvido",
     CLOSED: "Fechado",
 };

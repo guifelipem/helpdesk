@@ -49,6 +49,11 @@ export async function rejectTicketResolution({
         return response.data;
 }
 
+export async function sendTicketToAgent(id: number) {
+        const response = await api.post<Ticket>(`/tickets/${id}/send-to-agent`);
+        return response.data;
+}
+
 export async function assignTicketToMe(id: number) {
         const response = await api.patch<Ticket>(`/tickets/${id}/assign/me`);
         return response.data;

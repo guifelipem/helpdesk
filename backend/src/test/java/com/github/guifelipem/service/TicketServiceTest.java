@@ -307,6 +307,82 @@ class TicketServiceTest {
                 assertNotNull(historyToSave.getCreatedAt());
         }
 
+        @Test
+        void shouldAllowResponsibleAgentToResumeTicketWaitingForAgent() {
+                User agent = User.builder().id(1L).name("Agente").role(UserRole.AGENT).build();
+                User client = User.builder().id(2L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_AGENT)
+                        .createdBy(client)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.updateStatus(
+                        1L,
+                        new UpdateTicketStatusRequest(TicketStatus.IN_PROGRESS)
+                );
+
+                assertEquals(TicketStatus.IN_PROGRESS, response.status());
+                assertSame(agent, ticket.getAssignedTo());
+
+                ArgumentCaptor<TicketHistory> historyCaptor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+                assertEquals(TicketStatus.WAITING_AGENT.name(), historyCaptor.getValue().getOldValue());
+                assertEquals(TicketStatus.IN_PROGRESS.name(), historyCaptor.getValue().getNewValue());
+        }
+
+        @Test
+        void shouldNotAllowAgentToSendWaitingClientTicketToWaitingAgent() {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.updateStatus(
+                                1L,
+                                new UpdateTicketStatusRequest(TicketStatus.WAITING_AGENT)
+                        )
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
+        }
+
+        @Test
+        void shouldNotAllowAgentToResolveTicketWhileWaitingForClient() {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.updateStatus(
+                                1L,
+                                new UpdateTicketStatusRequest(TicketStatus.RESOLVED)
+                        )
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
         @ParameterizedTest
         @EnumSource(value = UserRole.class, names = {"AGENT", "ADMIN"})
         void shouldRejectStatusUpdateByNonResponsibleStaff(UserRole role) {
@@ -407,6 +483,7 @@ class TicketServiceTest {
         void shouldThrowInvalidTicketStatusTransitionExceptionWhenClosingTicketThatIsNotResolved() {
                 User user = User.builder()
                         .id(1L)
+                        .role(UserRole.CLIENT)
                         .build();
 
                 Ticket ticket = Ticket.builder()
@@ -436,6 +513,7 @@ class TicketServiceTest {
         void shouldCloseTicketSuccessfully() {
                 User user = User.builder()
                         .id(1L)
+                        .role(UserRole.CLIENT)
                         .build();
 
                 Ticket ticket = Ticket.builder()
@@ -605,6 +683,101 @@ class TicketServiceTest {
         }
 
         @Test
+        void shouldSendWaitingClientTicketToAgentSuccessfully() {
+                User client = User.builder().id(1L).name("Cliente").role(UserRole.CLIENT).build();
+                User agent = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(client)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.sendToAgent(1L);
+
+                assertEquals(TicketStatus.WAITING_AGENT, response.status());
+                assertSame(agent, ticket.getAssignedTo());
+                assertNotNull(ticket.getUpdatedAt());
+
+                ArgumentCaptor<TicketHistory> historyCaptor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+
+                TicketHistory history = historyCaptor.getValue();
+                assertEquals(TicketHistoryAction.STATUS_CHANGED, history.getAction());
+                assertEquals(TicketStatus.WAITING_CLIENT.name(), history.getOldValue());
+                assertEquals(TicketStatus.WAITING_AGENT.name(), history.getNewValue());
+                assertSame(client, history.getPerformedBy());
+                assertNull(history.getDetails());
+        }
+
+        @Test
+        void shouldRejectSendingTicketToAgentByClientWhoDoesNotOwnIt() {
+                User owner = User.builder().id(1L).role(UserRole.CLIENT).build();
+                User anotherClient = User.builder().id(2L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(owner)
+                        .assignedTo(User.builder().id(3L).build())
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherClient);
+
+                assertThrows(ForbiddenException.class, () -> ticketService.sendToAgent(1L));
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
+        }
+
+        @Test
+        void shouldRejectSendingTicketToAgentWhenStatusIsNotWaitingClient() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.IN_PROGRESS)
+                        .createdBy(client)
+                        .assignedTo(User.builder().id(2L).build())
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.sendToAgent(1L)
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldRejectSendingUnassignedTicketToAgent() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(client)
+                        .assignedTo(null)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                InvalidTicketStatusTransitionException exception = assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.sendToAgent(1L)
+                );
+
+                assertEquals("Um chamado sem responsável não pode aguardar análise do suporte", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
         void shouldThrowTicketNotFoundExceptionWhenAssigningNonExistingTicket() {
                 User agent = User.builder().id(1L).build();
 
@@ -636,7 +809,7 @@ class TicketServiceTest {
         @ParameterizedTest
         @EnumSource(
                 value = TicketStatus.class,
-                names = {"IN_PROGRESS", "WAITING_CLIENT", "RESOLVED", "CLOSED"}
+                names = {"IN_PROGRESS", "WAITING_CLIENT", "WAITING_AGENT", "RESOLVED", "CLOSED"}
         )
         void shouldThrowInvalidTicketStatusTransitionExceptionWhenAssigningNonOpenTicket(TicketStatus status) {
                 User agent = User.builder().id(1L).build();

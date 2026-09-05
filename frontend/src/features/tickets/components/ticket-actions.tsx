@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 
-import { useAssignTicket, useUpdateTicketStatus, useCloseTicket, useRejectTicketResolution } from "../hooks/use-tickets";
+import { useAssignTicket, useUpdateTicketStatus, useCloseTicket, useRejectTicketResolution, useSendTicketToAgent } from "../hooks/use-tickets";
 import type { Ticket, TicketStatus } from "../types/ticket.types";
 import { Undo2 } from "lucide-react";
 
@@ -22,8 +22,9 @@ export function TicketActions({ ticket }: TicketActionsProps) {
     const updateStatus = useUpdateTicketStatus();
     const closeTicket = useCloseTicket();
     const rejectResolution = useRejectTicketResolution();
+    const sendToAgent = useSendTicketToAgent();
 
-    const mutationError = assignTicket.error ?? updateStatus.error ?? closeTicket.error ?? rejectResolution.error;
+    const mutationError = assignTicket.error ?? updateStatus.error ?? closeTicket.error ?? rejectResolution.error ?? sendToAgent.error;
 
     const errorMessage = getApiErrorMessage(
         mutationError,
@@ -48,6 +49,16 @@ export function TicketActions({ ticket }: TicketActionsProps) {
 
     function handleClose() {
         closeTicket.mutate(ticket.id);
+    }
+
+    function handleSendToAgent() {
+        const confirmed = window.confirm(
+            "Você confirma que já enviou as informações solicitadas? O chamado será devolvido para a fila do agente responsável."
+        );
+
+        if (confirmed) {
+            sendToAgent.mutate(ticket.id);
+        }
     }
 
     function handleRejectResolution(event: FormEvent<HTMLFormElement>) {
@@ -77,10 +88,33 @@ export function TicketActions({ ticket }: TicketActionsProps) {
         rejectResolution.reset();
     }
 
-    const isPending = assignTicket.isPending || updateStatus.isPending || closeTicket.isPending || rejectResolution.isPending;
+    const isPending = assignTicket.isPending || updateStatus.isPending || closeTicket.isPending || rejectResolution.isPending || sendToAgent.isPending;
 
     if (isClient) {
-        if (ticket.status !== "RESOLVED" || !isTicketOwner) {
+        if (!isTicketOwner) {
+            return null;
+        }
+
+        if (ticket.status === "WAITING_CLIENT") {
+            return (
+                <div className="space-y-2">
+                    <Button onClick={handleSendToAgent} disabled={sendToAgent.isPending}>
+                        {sendToAgent.isPending ? "Enviando..." : "Enviar para análise do suporte"}
+                    </Button>
+
+                    {sendToAgent.isError && (
+                        <p role="alert" className="text-sm text-red-200">
+                            {getApiErrorMessage(
+                                sendToAgent.error,
+                                "Não foi possível enviar o chamado para análise do suporte. Tente novamente."
+                            )}
+                        </p>
+                    )}
+                </div>
+            );
+        }
+
+        if (ticket.status !== "RESOLVED") {
             return null;
         }
 
@@ -187,35 +221,35 @@ export function TicketActions({ ticket }: TicketActionsProps) {
                             onClick={() => handleStatusChange("WAITING_CLIENT")}
                             disabled={isPending}
                         >
-                            Aguardar cliente
+                            Aguardar resposta do cliente
                         </Button>
 
                         <Button
                             onClick={() => handleStatusChange("RESOLVED")}
                             disabled={isPending}
                         >
-                            Marcar como Resolvido
+                            Resolver chamado
                         </Button>
                     </>
                 )}
 
                 {ticket.status === "WAITING_CLIENT" && (
-                    <>
-                        <Button
-                            variant="outline"
-                            onClick={() => handleStatusChange("IN_PROGRESS")}
-                            disabled={isPending}
-                        >
-                            Retomar atendimento
-                        </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => handleStatusChange("IN_PROGRESS")}
+                        disabled={isPending}
+                    >
+                        Retomar atendimento
+                    </Button>
+                )}
 
-                        <Button
-                            onClick={() => handleStatusChange("RESOLVED")}
-                            disabled={isPending}
-                        >
-                            Marcar como Resolvido
-                        </Button>
-                    </>
+                {ticket.status === "WAITING_AGENT" && (
+                    <Button
+                        onClick={() => handleStatusChange("IN_PROGRESS")}
+                        disabled={isPending}
+                    >
+                        Retomar atendimento
+                    </Button>
                 )}
             </div>
 

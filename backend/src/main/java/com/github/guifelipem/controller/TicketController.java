@@ -81,7 +81,7 @@ public class TicketController {
 
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @PatchMapping("/{id}/status")
-    @Operation(summary = "Alterar status do chamado", description = "Permitido a AGENT e ADMIN, mas somente quando o usuário autenticado é o responsável. Transições aceitas: OPEN → IN_PROGRESS; IN_PROGRESS → WAITING_CLIENT ou RESOLVED; WAITING_CLIENT → IN_PROGRESS ou RESOLVED. CLOSED deve ser confirmado pelo cliente no endpoint de fechamento.")
+    @Operation(summary = "Alterar status do chamado", description = "Permitido a AGENT e ADMIN, mas somente quando o usuário autenticado é o responsável. Transições aceitas: OPEN → IN_PROGRESS; IN_PROGRESS → WAITING_CLIENT ou RESOLVED; WAITING_CLIENT → IN_PROGRESS; WAITING_AGENT → IN_PROGRESS. Transições do cliente possuem endpoints específicos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Status alterado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
             @ApiResponse(responseCode = "400", description = "Status ausente ou transição inválida"),
@@ -127,6 +127,22 @@ public class TicketController {
             @RequestBody @Valid RejectResolutionRequest request) {
 
         return ResponseEntity.ok(ticketService.rejectResolution(id, request));
+    }
+
+    @PreAuthorize("hasRole('CLIENT')")
+    @PostMapping("/{id}/send-to-agent")
+    @Operation(summary = "Enviar chamado para análise do suporte", description = "O CLIENT criador informa explicitamente que terminou de fornecer os dados solicitados. O chamado passa de WAITING_CLIENT para WAITING_AGENT e mantém o responsável.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Chamado enviado para análise do suporte", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Chamado não está em WAITING_CLIENT ou não possui responsável", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT ou cliente não é o criador", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> sendToAgent(
+            @Parameter(description = "ID do chamado", example = "42") @PathVariable Long id) {
+
+        return ResponseEntity.ok(ticketService.sendToAgent(id));
     }
 
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
