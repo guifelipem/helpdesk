@@ -61,6 +61,7 @@ class TicketHistoryServiceTest {
                         .action(TicketHistoryAction.STATUS_CHANGED)
                         .oldValue("OPEN")
                         .newValue("IN_PROGRESS")
+                        .details("Detalhes do evento")
                         .performedBy(client)
                         .createdAt(createdAt)
                         .build();
@@ -85,6 +86,7 @@ class TicketHistoryServiceTest {
                 assertEquals(TicketHistoryAction.STATUS_CHANGED, historyResponse.action());
                 assertEquals("OPEN", historyResponse.oldValue());
                 assertEquals("IN_PROGRESS", historyResponse.newValue());
+                assertEquals("Detalhes do evento", historyResponse.details());
                 assertEquals(client.getId(), historyResponse.performedBy().id());
                 assertEquals(client.getName(), historyResponse.performedBy().name());
                 assertEquals(client.getRole(), historyResponse.performedBy().role());

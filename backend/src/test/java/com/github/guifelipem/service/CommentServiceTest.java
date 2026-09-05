@@ -187,9 +187,29 @@ public class CommentServiceTest {
                 );
 
                 assertEquals(
-                        "Não é possível comentar em um chamado encerrado",
+                        "Não é possível comentar em um chamado resolvido ou encerrado",
                         exception.getMessage()
                 );
+        }
+
+        @Test
+        void shouldThrowForbiddenExceptionWhenCommentingOnResolvedTicket() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(client)
+                        .status(TicketStatus.RESOLVED)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.create(1L, new CreateCommentRequest("Ainda falha", false))
+                );
+
+                assertEquals("Não é possível comentar em um chamado resolvido ou encerrado", exception.getMessage());
         }
 
         @Test

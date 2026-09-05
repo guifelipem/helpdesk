@@ -1,10 +1,11 @@
 import type { TicketHistoryAction, TicketHistoryResponse } from "../types/ticket-history-types";
-import { CirclePlus, RefreshCw, UserCheck, type LucideIcon } from "lucide-react";
+import { CirclePlus, RefreshCw, Undo2, UserCheck, type LucideIcon } from "lucide-react";
 
 const actionLabels: Record<TicketHistoryAction, string> = {
     TICKET_CREATED: "Chamado criado",
     TICKET_ASSIGNED: "Chamado atribuído",
     STATUS_CHANGED: "Status alterado",
+    RESOLUTION_REJECTED: "Resolução rejeitada",
 };
 
 const statusLabels: Record<string, string> = {
@@ -19,6 +20,7 @@ const actionIcons: Record<TicketHistoryAction, LucideIcon> = {
     TICKET_CREATED: CirclePlus,
     TICKET_ASSIGNED: UserCheck,
     STATUS_CHANGED: RefreshCw,
+    RESOLUTION_REJECTED: Undo2,
 };
 
 function translateValue(value: string | null) {
@@ -56,6 +58,11 @@ export function getHistoryDescription(item: TicketHistoryResponse) {
             return newValue
                 ? `O status foi alterado para ${newValue}.`
                 : "O status do chamado foi alterado.";
+
+        case "RESOLUTION_REJECTED":
+            return item.details
+                ? `A resolução foi rejeitada: ${item.details}`
+                : "A resolução do chamado foi rejeitada.";
     }
 }
 

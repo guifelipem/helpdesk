@@ -2,6 +2,7 @@ package com.github.guifelipem.controller;
 
 import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
+import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.enums.TicketPriority;
@@ -108,6 +109,24 @@ public class TicketController {
     public ResponseEntity<TicketResponse> closeTicket(@Parameter(description = "ID do chamado", example = "42") @PathVariable Long id) {
 
         return ResponseEntity.ok(ticketService.closeTicket(id));
+    }
+
+    @PreAuthorize("hasRole('CLIENT')")
+    @PostMapping("/{id}/reject-resolution")
+    @Operation(summary = "Rejeitar resolução", description = "O CLIENT criador rejeita, com justificativa obrigatória, a resolução de um chamado RESOLVED. O chamado retorna para IN_PROGRESS e mantém o responsável atual.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Resolução rejeitada", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Justificativa inválida ou chamado não está em RESOLVED", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT ou cliente não é o criador", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> rejectResolution(
+            @Parameter(description = "ID do chamado", example = "42") @PathVariable Long id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Justificativa da rejeição", required = true)
+            @RequestBody @Valid RejectResolutionRequest request) {
+
+        return ResponseEntity.ok(ticketService.rejectResolution(id, request));
     }
 
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")

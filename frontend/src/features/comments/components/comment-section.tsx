@@ -27,7 +27,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
 
     const canCreateInternalComment = user?.role === "AGENT" || user?.role === "ADMIN";
 
-    const isTicketClosed = ticketStatus === "CLOSED";
+    const isTicketReadOnly = ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
 
     const { data: comments = [], isLoading, isError, error, refetch, isFetching, } = useComments(ticketId);
     const createCommentMutation = useCreateComment(ticketId);
@@ -138,9 +138,11 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                     </div>
                 )}
 
-                {isTicketClosed ? (
+                {isTicketReadOnly ? (
                     <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
-                        Este chamado foi encerrado e não aceita novos comentários.
+                        {ticketStatus === "RESOLVED"
+                            ? "Este chamado aguarda a confirmação da resolução e não aceita novos comentários. Confirme ou rejeite a resolução acima."
+                            : "Este chamado foi encerrado e não aceita novos comentários."}
                     </p>
                 ) : (
                     <div className="space-y-3 border-t border-[#413b6b]/10 pt-5">

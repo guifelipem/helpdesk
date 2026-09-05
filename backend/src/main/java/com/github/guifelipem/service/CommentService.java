@@ -48,8 +48,8 @@ public class CommentService {
             throw new ForbiddenException("Somente o responsável pode comentar neste chamado");
         }
 
-        if (ticket.getStatus() == TicketStatus.CLOSED) {
-            throw new ForbiddenException("Não é possível comentar em um chamado encerrado");
+        if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new ForbiddenException("Não é possível comentar em um chamado resolvido ou encerrado");
         }
 
         if (Boolean.TRUE.equals(request.isInternal()) && isClient) {

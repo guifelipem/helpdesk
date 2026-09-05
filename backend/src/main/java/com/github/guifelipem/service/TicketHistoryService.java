@@ -60,6 +60,7 @@ public class TicketHistoryService {
                 history.getAction(),
                 history.getOldValue(),
                 history.getNewValue(),
+                history.getDetails(),
                 performedBy,
                 history.getCreatedAt()
         );
