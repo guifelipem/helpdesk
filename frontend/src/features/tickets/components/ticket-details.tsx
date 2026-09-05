@@ -23,9 +23,9 @@ type InfoItemProps = {
 
 function InfoItem({ label, value, icon }: InfoItemProps) {
     return (
-        <div className="rounded-xl border border-[#413b6b]/8 bg-[#f8f8ff] p-4">
-            <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#5c65c0]">{icon}{label}</div>
-            <p className="font-semibold text-[#301c41]">{value}</p>
+        <div className="rounded-xl border border-border bg-card/65 p-4 dark:bg-black/15">
+            <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary-strong">{icon}{label}</div>
+            <p className="font-semibold text-foreground dark:text-white">{value}</p>
         </div>
     )
 }
@@ -37,12 +37,12 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 <Link to="/tickets"><ArrowLeft /> Voltar para chamados</Link>
             </Button>
 
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#301c41] via-[#413b6b] to-[#5c65c0] text-white ring-0">
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] text-white ring-0">
                 <div className="absolute -right-16 -top-20 size-64 rounded-full border-[34px] border-white/5" />
                 <CardHeader className="relative">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#aebfff]">
+                            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">
                                 Chamado #{ticket.id}
                             </p>
 
@@ -79,11 +79,11 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg font-bold"><span className="flex size-8 items-center justify-center rounded-lg bg-[#ececff] text-[#5c65c0]"><AlignLeft className="size-4" /></span>Descrição</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-lg font-bold"><span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary-strong"><AlignLeft className="size-4" /></span>Descrição</CardTitle>
                 </CardHeader>
 
                 <CardContent>
-                    <p className="whitespace-pre-line rounded-xl bg-[#f8f8ff] p-4 text-sm leading-7 text-[#413b6b]">
+                    <p className="whitespace-pre-line rounded-xl bg-muted/60 p-4 text-sm leading-7 text-foreground">
                         {ticket.description}
                     </p>
                 </CardContent>

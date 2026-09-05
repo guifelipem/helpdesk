@@ -21,7 +21,7 @@ export function TicketHistorySection({ ticketId }: TicketHistorySectionProps) {
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                    <span className="flex size-8 items-center justify-center rounded-lg bg-[#ececff] text-[#5c65c0]"><History className="size-4" /></span>
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary-strong"><History className="size-4" /></span>
                     Histórico
                 </CardTitle>
             </CardHeader>
@@ -68,7 +68,7 @@ export function TicketHistorySection({ ticketId }: TicketHistorySectionProps) {
 
                 {!isLoading && !isError && history.length > 0 && (
                     <div className="relative space-y-6">
-                        <div className="absolute bottom-2 left-[15px] top-2 w-px bg-[#5c65c0]/20" />
+                        <div className="absolute bottom-2 left-[15px] top-2 w-px bg-primary/30" />
 
                         {history.map((item) => {
                             const Icon = getHistoryIcon(item.action);
@@ -77,8 +77,8 @@ export function TicketHistorySection({ ticketId }: TicketHistorySectionProps) {
                                     key={item.id}
                                     className="relative flex gap-4"
                                 >
-                                    <div className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border border-[#5c65c0]/15 bg-[#ececff] shadow-[0_0_0_4px_white]">
-                                        <Icon className="size-3.5 text-[#5c65c0]" />
+                                    <div className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-secondary shadow-[0_0_0_4px_var(--card)]">
+                                        <Icon className="size-3.5 text-secondary-foreground" />
                                     </div>
 
                                     <div className="min-w-0 flex-1 pb-1">

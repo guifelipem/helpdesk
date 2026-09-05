@@ -146,7 +146,7 @@ export function TicketActions({ ticket }: TicketActionsProps) {
                 {isRejectingResolution && (
                     <form
                         onSubmit={handleRejectResolution}
-                        className="max-w-2xl space-y-3 rounded-xl border border-red-200 bg-white/95 p-4 text-[#301c41]"
+                        className="max-w-2xl space-y-3 rounded-xl border border-red-300 bg-card/95 p-4 text-foreground dark:border-red-800"
                     >
                         <div className="space-y-1">
                             <Label htmlFor="rejection-reason">Por que a resolução não resolveu o problema?</Label>
