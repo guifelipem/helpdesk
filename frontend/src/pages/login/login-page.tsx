@@ -41,8 +41,8 @@ export function LoginPage() {
 
       return user;
     },
-    onSuccess: () => {
-      navigate("/tickets");
+    onSuccess: (user) => {
+      navigate(user.role === "CLIENT" ? "/home" : "/tickets");
     },
   });
 

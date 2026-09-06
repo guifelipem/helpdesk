@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@ta
 import { keepPreviousData } from "@tanstack/react-query";
 
 import { assignTicketToMe, closeTicket, createTicket, findAllTickets, findMyTickets, findTicketById, rejectTicketResolution, returnTicketToQueue, sendTicketToAgent, transferTicket, updateTicketStatus } from "../api/ticket.api";
-import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
+import type { FindAllTicketsParams, FindMyTicketsParams } from "../types/find-all-tickets-params";
 import { ticketQueryKeys } from "../constants/ticket-query-keys";
 import { ticketHistoryQueryKeys } from "@/features/history/constants/ticket-history-query-keys";
 
@@ -22,7 +22,7 @@ export function useTickets(
 }
 
 export function useMyTickets(
-    params?: FindAllTicketsParams,
+    params?: FindMyTicketsParams,
     options?: Omit<UseQueryOptions<PageResponse<Ticket>>, "queryKey" | "queryFn">
 ) {
     return useQuery({

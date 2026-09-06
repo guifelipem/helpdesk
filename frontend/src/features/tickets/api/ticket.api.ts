@@ -4,7 +4,7 @@ import type { Ticket } from "../types/ticket.types";
 import type { CreateTicketRequest } from "../types/create-ticket-request";
 import type { UpdateTicketStatusRequest } from "../types/update-ticket-status-request";
 import type { RejectResolutionRequest } from "../types/reject-resolution-request";
-import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
+import type { FindAllTicketsParams, FindMyTicketsParams } from "../types/find-all-tickets-params";
 import type { PageResponse } from "@/shared/types/page-response";
 
 export async function createTicket(data: CreateTicketRequest) {
@@ -12,8 +12,17 @@ export async function createTicket(data: CreateTicketRequest) {
         return response.data;
 }
 
-export async function findMyTickets(params?: FindAllTicketsParams) {
-        const response = await api.get<PageResponse<Ticket>>("/tickets/me", { params });
+export async function findMyTickets(params?: FindMyTicketsParams) {
+        const normalizedParams = params
+                ? {
+                        ...params,
+                        status: Array.isArray(params.status)
+                                ? params.status.join(",")
+                                : params.status,
+                }
+                : undefined;
+
+        const response = await api.get<PageResponse<Ticket>>("/tickets/me", { params: normalizedParams });
         return response.data;
 }
 

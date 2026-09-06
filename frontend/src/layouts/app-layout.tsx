@@ -1,4 +1,4 @@
-import { Headphones, LogOut, Ticket, UserRound, UsersRound } from "lucide-react";
+import { Headphones, House, ListChecks, LogOut, Ticket, UserRound, UsersRound } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -37,10 +37,23 @@ export function AppLayout() {
                 </div>
 
                 <nav className="mt-4 flex gap-2 lg:mt-10 lg:flex-col">
-                    <NavLink to="/tickets" className={navClass}>
-                        <Ticket className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
-                        Chamados
-                    </NavLink>
+                    {user?.role === "CLIENT" ? (
+                        <>
+                            <NavLink to="/home" className={navClass}>
+                                <House className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
+                                Início
+                            </NavLink>
+                            <NavLink to="/tickets" className={navClass}>
+                                <ListChecks className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
+                                Meus chamados
+                            </NavLink>
+                        </>
+                    ) : (
+                        <NavLink to="/tickets" className={navClass}>
+                            <Ticket className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
+                            Chamados
+                        </NavLink>
+                    )}
 
                     {user?.role === "ADMIN" && (
                         <NavLink to="/users" className={navClass}>
