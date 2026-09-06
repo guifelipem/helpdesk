@@ -5,6 +5,7 @@ import com.github.guifelipem.dto.ticket.UserSummaryResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.entity.Ticket;
@@ -14,6 +15,7 @@ import com.github.guifelipem.enums.TicketHistoryAction;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.enums.TicketQueue;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
 import com.github.guifelipem.exception.InvalidTicketManagementException;
@@ -26,7 +28,9 @@ import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -429,6 +433,50 @@ public class TicketService {
         return toPageResponse(tickets);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<TicketResponse> findQueue(TicketQueue queue, Pageable pageable) {
+        User agent = requireAgent();
+
+        Page<Ticket> tickets = switch (queue) {
+            case AVAILABLE -> ticketRepository.findAvailableForAgent(withoutSort(pageable));
+            case MY_TICKETS -> ticketRepository.findAllByAssignedToId(
+                    agent.getId(), withSort(pageable, Sort.Direction.DESC, "updatedAt")
+            );
+            case WAITING_CLIENT -> ticketRepository.findAllByAssignedToIdAndStatus(
+                    agent.getId(), TicketStatus.WAITING_CLIENT,
+                    withSort(pageable, Sort.Direction.ASC, "updatedAt")
+            );
+            case WAITING_AGENT -> ticketRepository.findAllByAssignedToIdAndStatus(
+                    agent.getId(), TicketStatus.WAITING_AGENT,
+                    withSort(pageable, Sort.Direction.ASC, "updatedAt")
+            );
+            case RESOLVED -> ticketRepository.findAllByAssignedToIdAndStatus(
+                    agent.getId(), TicketStatus.RESOLVED,
+                    withSort(pageable, Sort.Direction.DESC, "updatedAt")
+            );
+        };
+
+        return toPageResponse(tickets);
+    }
+
+    @Transactional(readOnly = true)
+    public TicketQueueSummaryResponse summarizeQueues() {
+        User agent = requireAgent();
+        return ticketRepository.summarizeQueuesForAgent(agent.getId());
+    }
+
+    private Pageable withoutSort(Pageable pageable) {
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+    }
+
+    private Pageable withSort(Pageable pageable, Sort.Direction direction, String property) {
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(direction, property).and(Sort.by(direction, "id"))
+        );
+    }
+
     private String normalizeSearch(String search) {
         return search == null || search.isBlank() ? null : search.trim();
     }
@@ -453,6 +501,14 @@ public class TicketService {
         User user = authenticatedUserProvider.getAuthenticatedUser();
         if (user.getRole() != UserRole.ADMIN) {
             throw new ForbiddenException("Somente administradores podem gerenciar a atribuição de chamados");
+        }
+        return user;
+    }
+
+    private User requireAgent() {
+        User user = authenticatedUserProvider.getAuthenticatedUser();
+        if (user.getRole() != UserRole.AGENT) {
+            throw new ForbiddenException("Somente agentes podem acessar as filas operacionais");
         }
         return user;
     }

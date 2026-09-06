@@ -4,6 +4,7 @@ import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.entity.Ticket;
@@ -11,6 +12,7 @@ import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketHistoryAction;
 import com.github.guifelipem.enums.TicketPriority;
+import com.github.guifelipem.enums.TicketQueue;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
@@ -36,6 +38,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.EnumSet;
@@ -1344,5 +1347,61 @@ class TicketServiceTest {
 
                 assertEquals("O agente de destino está bloqueado", exception.getMessage());
                 verify(ticketRepository, never()).save(any());
+        }
+
+        @Test
+        void shouldApplyAgentScopeAndBusinessOrderingToWaitingAgentQueue() {
+                User agent = User.builder().id(7L).role(UserRole.AGENT).build();
+                User client = User.builder().id(8L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(9L).createdBy(client).assignedTo(agent)
+                        .status(TicketStatus.WAITING_AGENT).build();
+                Page<Ticket> page = new PageImpl<>(List.of(ticket), PageRequest.of(1, 5), 6);
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+                when(ticketRepository.findAllByAssignedToIdAndStatus(
+                        eq(agent.getId()), eq(TicketStatus.WAITING_AGENT), any(Pageable.class)
+                )).thenReturn(page);
+
+                PageResponse<TicketResponse> response = ticketService.findQueue(
+                        TicketQueue.WAITING_AGENT, PageRequest.of(1, 5)
+                );
+
+                ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+                verify(ticketRepository).findAllByAssignedToIdAndStatus(
+                        eq(agent.getId()), eq(TicketStatus.WAITING_AGENT), pageableCaptor.capture()
+                );
+                Pageable appliedPageable = pageableCaptor.getValue();
+                assertEquals(1, appliedPageable.getPageNumber());
+                assertEquals(5, appliedPageable.getPageSize());
+                assertEquals(Sort.Direction.ASC, appliedPageable.getSort().getOrderFor("updatedAt").getDirection());
+                assertEquals(6, response.totalElements());
+                assertEquals(agent.getId(), response.content().getFirst().assignedTo().id());
+        }
+
+        @Test
+        void shouldReturnQueueSummaryForAuthenticatedAgent() {
+                User agent = User.builder().id(7L).role(UserRole.AGENT).build();
+                TicketQueueSummaryResponse expected = new TicketQueueSummaryResponse(8, 12, 4, 3, 5);
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+                when(ticketRepository.summarizeQueuesForAgent(agent.getId())).thenReturn(expected);
+
+                TicketQueueSummaryResponse response = ticketService.summarizeQueues();
+
+                assertEquals(expected, response);
+                verify(ticketRepository).summarizeQueuesForAgent(agent.getId());
+        }
+
+        @Test
+        void shouldNotTreatAdminAsAgentWhenAccessingQueues() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.findQueue(TicketQueue.MY_TICKETS, PageRequest.of(0, 10))
+                );
+
+                assertEquals("Somente agentes podem acessar as filas operacionais", exception.getMessage());
+                verifyNoInteractions(ticketRepository);
         }
 }
