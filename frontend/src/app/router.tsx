@@ -7,6 +7,7 @@ import { TicketsPage } from "@/pages/tickets/tickets-page";
 import { CreateTicketPage } from "@/pages/tickets/create-ticket-page";
 import { UsersPage } from "@/pages/users/users-page";
 import { ClientHomePage } from "@/pages/home/client-home-page";
+import { TicketQueuesPage } from "@/pages/queues/ticket-queues-page";
 import { ProtectedRoute } from "@/features/auth/components/protected.route"
 import { InitialRoute } from "@/features/auth/components/initial-route";
 import { AppLayout } from "@/layouts/app-layout";
@@ -37,6 +38,10 @@ export const router = createBrowserRouter([
                     {
                         path: "/tickets",
                         element: <TicketsPage />,
+                    },
+                    {
+                        path: "/queues",
+                        element: <TicketQueuesPage />,
                     },
                     {
                         path: "/tickets/:id",
