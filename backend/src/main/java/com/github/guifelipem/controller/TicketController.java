@@ -27,6 +27,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
+
 @RestController
 @RequestMapping("/api/tickets")
 @RequiredArgsConstructor
@@ -61,12 +63,12 @@ public class TicketController {
             @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<PageResponse<TicketResponse>> findMyTickets(
-            @Parameter(description = "Filtra pelo status") @RequestParam(required = false) TicketStatus status,
+            @Parameter(description = "Filtra por um ou mais status, separados por vírgula") @RequestParam(required = false) Set<TicketStatus> status,
             @Parameter(description = "Filtra pela prioridade") @RequestParam(required = false) TicketPriority priority,
             @Parameter(description = "Busca parcial no título ou descrição") @RequestParam(required = false) String search,
             @Parameter(description = "Índice da página, começando em zero") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Quantidade de itens por página") @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "Campo e direção separados por vírgula") @RequestParam(defaultValue = "createdAt,desc") String sort
+            @Parameter(description = "Campo e direção separados por vírgula") @RequestParam(defaultValue = "updatedAt,desc") String sort
     ) {
         return ResponseEntity.ok(ticketService.findMyTickets(
                 status, priority, search, createPageable(page, size, sort)

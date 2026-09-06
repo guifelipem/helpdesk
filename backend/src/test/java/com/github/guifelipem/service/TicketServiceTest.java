@@ -38,8 +38,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -1150,15 +1152,15 @@ class TicketServiceTest {
                         .thenReturn(user);
 
                 when(ticketRepository.findAllCreatedByWithFilters(
-                        user.getId(), TicketStatus.OPEN, TicketPriority.HIGH, "erro", pageable
+                        user.getId(), Set.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS), TicketPriority.HIGH, "erro", pageable
                 )).thenReturn(myTickets);
 
                 PageResponse<TicketResponse> response = ticketService.findMyTickets(
-                        TicketStatus.OPEN, TicketPriority.HIGH, "  erro  ", pageable
+                        Set.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS), TicketPriority.HIGH, "  erro  ", pageable
                 );
 
                 verify(ticketRepository).findAllCreatedByWithFilters(
-                        user.getId(), TicketStatus.OPEN, TicketPriority.HIGH, "erro", pageable
+                        user.getId(), Set.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS), TicketPriority.HIGH, "erro", pageable
                 );
 
                 assertEquals(2, response.content().size());
@@ -1181,7 +1183,7 @@ class TicketServiceTest {
                         .thenReturn(user);
 
                 when(ticketRepository.findAllCreatedByWithFilters(
-                        user.getId(), null, null, null, pageable
+                        user.getId(), EnumSet.allOf(TicketStatus.class), null, null, pageable
                 )).thenReturn(Page.empty(pageable));
 
                 PageResponse<TicketResponse> response = ticketService.findMyTickets(
@@ -1189,7 +1191,7 @@ class TicketServiceTest {
                 );
 
                 verify(ticketRepository).findAllCreatedByWithFilters(
-                        user.getId(), null, null, null, pageable
+                        user.getId(), EnumSet.allOf(TicketStatus.class), null, null, pageable
                 );
 
                 assertTrue(response.content().isEmpty());

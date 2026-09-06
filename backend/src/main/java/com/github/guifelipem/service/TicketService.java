@@ -31,6 +31,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -64,7 +66,7 @@ public class TicketService {
 
     @Transactional(readOnly = true)
     public PageResponse<TicketResponse> findMyTickets(
-            TicketStatus status,
+            Set<TicketStatus> statuses,
             TicketPriority priority,
             String search,
             Pageable pageable
@@ -72,9 +74,12 @@ public class TicketService {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
         String normalizedSearch = normalizeSearch(search);
+        Set<TicketStatus> effectiveStatuses = statuses == null || statuses.isEmpty()
+                ? EnumSet.allOf(TicketStatus.class)
+                : EnumSet.copyOf(statuses);
 
         Page<Ticket> tickets = ticketRepository.findAllCreatedByWithFilters(
-                user.getId(), status, priority, normalizedSearch, pageable
+                user.getId(), effectiveStatuses, priority, normalizedSearch, pageable
         );
 
         return toPageResponse(tickets);
