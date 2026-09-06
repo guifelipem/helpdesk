@@ -1132,6 +1132,7 @@ class TicketServiceTest {
                 User user = User.builder()
                         .id(1L)
                         .build();
+                Pageable pageable = PageRequest.of(0, 10);
 
                 Ticket ticket1 = Ticket.builder()
                         .id(1L)
@@ -1143,23 +1144,30 @@ class TicketServiceTest {
                         .createdBy(user)
                         .build();
 
-                List<Ticket> meusTickets= List.of(ticket1, ticket2);
+                Page<Ticket> myTickets = new PageImpl<>(List.of(ticket1, ticket2), pageable, 2);
 
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(user);
 
-                when(ticketRepository.findByCreatedBy(user))
-                        .thenReturn(meusTickets);
+                when(ticketRepository.findAllCreatedByWithFilters(
+                        user.getId(), TicketStatus.OPEN, TicketPriority.HIGH, "erro", pageable
+                )).thenReturn(myTickets);
 
-                List<TicketResponse> response = ticketService.findMyTickets();
+                PageResponse<TicketResponse> response = ticketService.findMyTickets(
+                        TicketStatus.OPEN, TicketPriority.HIGH, "  erro  ", pageable
+                );
 
-                verify(ticketRepository).findByCreatedBy(user);
+                verify(ticketRepository).findAllCreatedByWithFilters(
+                        user.getId(), TicketStatus.OPEN, TicketPriority.HIGH, "erro", pageable
+                );
 
-                assertEquals(2, response.size());
+                assertEquals(2, response.content().size());
+                assertEquals(2, response.totalElements());
+                assertEquals(0, response.page());
 
-                assertEquals(1L, response.getFirst().id());
-                assertEquals(2L, response.get(1).id());
-                assertEquals(user.getId(), response.getFirst().createdBy().id());
+                assertEquals(1L, response.content().getFirst().id());
+                assertEquals(2L, response.content().get(1).id());
+                assertEquals(user.getId(), response.content().getFirst().createdBy().id());
         }
 
         @Test
@@ -1167,18 +1175,25 @@ class TicketServiceTest {
                 User user = User.builder()
                         .id(1L)
                         .build();
+                Pageable pageable = PageRequest.of(0, 10);
 
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(user);
 
-                when(ticketRepository.findByCreatedBy(user))
-                        .thenReturn(List.of());
+                when(ticketRepository.findAllCreatedByWithFilters(
+                        user.getId(), null, null, null, pageable
+                )).thenReturn(Page.empty(pageable));
 
-                List<TicketResponse> response = ticketService.findMyTickets();
+                PageResponse<TicketResponse> response = ticketService.findMyTickets(
+                        null, null, "   ", pageable
+                );
 
-                verify(ticketRepository).findByCreatedBy(user);
+                verify(ticketRepository).findAllCreatedByWithFilters(
+                        user.getId(), null, null, null, pageable
+                );
 
-                assertTrue(response.isEmpty());
+                assertTrue(response.content().isEmpty());
+                assertEquals(0, response.totalElements());
         }
 
         @Test

@@ -27,8 +27,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/tickets")
 @RequiredArgsConstructor
@@ -56,15 +54,23 @@ public class TicketController {
 
     @PreAuthorize("hasRole('CLIENT')")
     @GetMapping("/me")
-    @Operation(summary = "Listar meus chamados", description = "Lista, sem paginação, todos os chamados criados pelo cliente autenticado. Permitido somente para CLIENT.")
+    @Operation(summary = "Listar meus chamados", description = "Lista os chamados criados pelo cliente autenticado com filtros, paginação e ordenação. Permitido somente para CLIENT.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Chamados do cliente"),
             @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public ResponseEntity<List<TicketResponse>> findMyTickets() {
-
-        return ResponseEntity.ok(ticketService.findMyTickets());
+    public ResponseEntity<PageResponse<TicketResponse>> findMyTickets(
+            @Parameter(description = "Filtra pelo status") @RequestParam(required = false) TicketStatus status,
+            @Parameter(description = "Filtra pela prioridade") @RequestParam(required = false) TicketPriority priority,
+            @Parameter(description = "Busca parcial no título ou descrição") @RequestParam(required = false) String search,
+            @Parameter(description = "Índice da página, começando em zero") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Quantidade de itens por página") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Campo e direção separados por vírgula") @RequestParam(defaultValue = "createdAt,desc") String sort
+    ) {
+        return ResponseEntity.ok(ticketService.findMyTickets(
+                status, priority, search, createPageable(page, size, sort)
+        ));
     }
 
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
@@ -196,12 +202,15 @@ public class TicketController {
             @Parameter(description = "Campo e direção separados por vírgula", example = "createdAt,desc") @RequestParam(defaultValue = "createdAt,desc") String sort
             ) {
 
-        String[] sortParams = sort.split(",");
+        return ResponseEntity.ok(ticketService.findAll(
+                status, priority, search, createPageable(page, size, sort)
+        ));
+    }
 
-        Pageable pageable = PageRequest.of(page, size,
+    private Pageable createPageable(int page, int size, String sort) {
+        String[] sortParams = sort.split(",");
+        return PageRequest.of(page, size,
                 Sort.by(Sort.Direction.fromString(sortParams[1]), sortParams[0])
         );
-
-        return ResponseEntity.ok(ticketService.findAll(status, priority, search, pageable));
     }
 }

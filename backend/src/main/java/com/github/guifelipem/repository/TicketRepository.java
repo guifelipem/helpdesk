@@ -12,13 +12,28 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.List;
-
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
-    List<Ticket> findByCreatedBy(User user);
-
     boolean existsByAssignedToAndStatusNot(User assignedTo, TicketStatus status);
+
+    @Query("""
+            SELECT t FROM Ticket t
+            WHERE t.createdBy.id = :clientId
+            AND (:status IS NULL OR t.status = :status)
+            AND (:priority IS NULL OR t.priority = :priority)
+            AND (
+                CAST(:search AS string) IS NULL OR
+                LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR
+                LOWER(t.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            )
+            """)
+    Page<Ticket> findAllCreatedByWithFilters(
+            Long clientId,
+            TicketStatus status,
+            TicketPriority priority,
+            String search,
+            Pageable pageable
+    );
 
     @Query("""
             SELECT t FROM Ticket t

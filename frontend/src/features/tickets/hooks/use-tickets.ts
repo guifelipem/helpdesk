@@ -22,11 +22,13 @@ export function useTickets(
 }
 
 export function useMyTickets(
-    options?: Omit<UseQueryOptions<Ticket[]>, "queryKey" | "queryFn">
+    params?: FindAllTicketsParams,
+    options?: Omit<UseQueryOptions<PageResponse<Ticket>>, "queryKey" | "queryFn">
 ) {
     return useQuery({
-        queryKey: [...ticketQueryKeys.all, "my"],
-        queryFn: findMyTickets,
+        queryKey: [...ticketQueryKeys.all, "my", params],
+        queryFn: () => findMyTickets(params),
+        placeholderData: keepPreviousData,
         ...options,
     });
 }

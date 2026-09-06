@@ -35,17 +35,26 @@ export function TicketsPage() {
         },
     );
 
-    const myTicketsQuery = useMyTickets({ enabled: isClient, });
+    const myTicketsQuery = useMyTickets(
+        {
+            search: search || undefined,
+            status: status || undefined,
+            priority: priority || undefined,
+            page,
+            size: 6,
+        },
+        { enabled: isClient },
+    );
 
     const isPending = isClient ? myTicketsQuery.isPending : allTicketsQuery.isPending;
 
     const isError = isClient ? myTicketsQuery.isError : allTicketsQuery.isError;
 
-    const tickets = isClient ? myTicketsQuery.data : allTicketsQuery.data?.content;
+    const tickets = isClient ? myTicketsQuery.data?.content : allTicketsQuery.data?.content;
 
     const refetch = isClient ? myTicketsQuery.refetch : allTicketsQuery.refetch;
 
-    const pageData = allTicketsQuery.data;
+    const pageData = isClient ? myTicketsQuery.data : allTicketsQuery.data;
 
     const hasActiveFilters = search !== "" || status !== "" || priority !== "";
 
@@ -75,7 +84,7 @@ export function TicketsPage() {
         );
     }
 
-    if (!isPending && isClient && (!tickets || tickets.length === 0)) {
+    if (!isPending && isClient && !hasActiveFilters && (!tickets || tickets.length === 0)) {
         return (
             <div className="rounded-3xl border border-dashed border-primary/35 bg-card/70 px-6 py-16 text-center shadow-sm">
                 <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary-strong"><TicketIcon /></div>
@@ -115,8 +124,7 @@ export function TicketsPage() {
                 </div>
             </div>
 
-            {!isClient && (
-                <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-[0_15px_40px_-30px_#4794b866] backdrop-blur-sm">
+            <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-[0_15px_40px_-30px_#4794b866] backdrop-blur-sm">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><Filter className="size-4 text-primary-strong" /> Filtros</div>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <div className="relative">
@@ -181,10 +189,9 @@ export function TicketsPage() {
                         Limpar filtros
                     </Button>
                   </div>
-                </div>
-            )}
+            </div>
 
-            {!isClient && pageData && (
+            {pageData && (
                 <p className="text-sm font-medium text-muted-foreground">
                     {pageData.totalElements} chamado
                     {pageData.totalElements === 1 ? "" : "s"} encontrado
@@ -204,11 +211,11 @@ export function TicketsPage() {
                 </div>
             )}
 
-            {!isClient && pageData && pageData.totalPages > 1 && (
+            {pageData && pageData.totalPages > 1 && (
                 <div className="flex items-center justify-between rounded-2xl border border-border bg-card/70 p-3 shadow-sm">
                     <Button
                         variant="outline"
-                        disabled={page === 0 || allTicketsQuery.isFetching}
+                        disabled={page === 0 || (isClient ? myTicketsQuery.isFetching : allTicketsQuery.isFetching)}
                         onClick={() => setPage((currentPage) => currentPage - 1)}
                     >
                         Anterior
@@ -220,7 +227,7 @@ export function TicketsPage() {
 
                     <Button
                         variant="outline"
-                        disabled={page >= pageData.totalPages - 1 || allTicketsQuery.isFetching}
+                        disabled={page >= pageData.totalPages - 1 || (isClient ? myTicketsQuery.isFetching : allTicketsQuery.isFetching)}
                         onClick={() => setPage((currentPage) => currentPage + 1)}
                     >
                         Próxima

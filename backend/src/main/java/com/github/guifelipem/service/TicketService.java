@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -64,11 +63,21 @@ public class TicketService {
     }
 
     @Transactional(readOnly = true)
-    public List<TicketResponse> findMyTickets() {
+    public PageResponse<TicketResponse> findMyTickets(
+            TicketStatus status,
+            TicketPriority priority,
+            String search,
+            Pageable pageable
+    ) {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
+        String normalizedSearch = normalizeSearch(search);
 
-        return ticketRepository.findByCreatedBy(user).stream().map(this::toResponse).toList();
+        Page<Ticket> tickets = ticketRepository.findAllCreatedByWithFilters(
+                user.getId(), status, priority, normalizedSearch, pageable
+        );
+
+        return toPageResponse(tickets);
     }
 
     private TicketResponse toResponse(Ticket ticket) {
@@ -391,7 +400,7 @@ public class TicketService {
 
         User currentUser = authenticatedUserProvider.getAuthenticatedUser();
 
-        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
+        String normalizedSearch = normalizeSearch(search);
 
         Page<Ticket> tickets;
 
@@ -412,6 +421,14 @@ public class TicketService {
             );
         }
 
+        return toPageResponse(tickets);
+    }
+
+    private String normalizeSearch(String search) {
+        return search == null || search.isBlank() ? null : search.trim();
+    }
+
+    private PageResponse<TicketResponse> toPageResponse(Page<Ticket> tickets) {
         return new PageResponse<>(
                 tickets.getContent().stream().map(this::toResponse).toList(),
                 tickets.getNumber(),

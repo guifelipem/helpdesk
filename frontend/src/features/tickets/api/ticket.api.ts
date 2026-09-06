@@ -12,8 +12,8 @@ export async function createTicket(data: CreateTicketRequest) {
         return response.data;
 }
 
-export async function findMyTickets() {
-        const response = await api.get<Ticket[]>("/tickets/me");
+export async function findMyTickets(params?: FindAllTicketsParams) {
+        const response = await api.get<PageResponse<Ticket>>("/tickets/me", { params });
         return response.data;
 }
 
