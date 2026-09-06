@@ -8,3 +8,7 @@ export type FindAllTicketsParams = {
     size?: number;
     sort?: string;
 };
+
+export type FindMyTicketsParams = Omit<FindAllTicketsParams, "status"> & {
+    status?: TicketStatus | TicketStatus[];
+};
