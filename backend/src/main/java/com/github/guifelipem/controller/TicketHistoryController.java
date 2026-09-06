@@ -30,7 +30,7 @@ public class TicketHistoryController {
 
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
     @GetMapping
-    @Operation(summary = "Consultar histórico do chamado", description = "Retorna os eventos em ordem cronológica. CLIENT acessa apenas chamado próprio. AGENT e ADMIN podem acessar chamado sem responsável ou atribuído a si, mas não um chamado atribuído a outra pessoa.")
+    @Operation(summary = "Consultar histórico do chamado", description = "Retorna os eventos em ordem cronológica. CLIENT acessa apenas chamado próprio. AGENT acessa chamado sem responsável ou atribuído a si. ADMIN pode supervisionar o histórico completo de qualquer chamado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Histórico do chamado"),
             @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),

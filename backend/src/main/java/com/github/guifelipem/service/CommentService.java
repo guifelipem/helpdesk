@@ -33,6 +33,10 @@ public class CommentService {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new ForbiddenException("Administradores possuem acesso somente leitura aos comentários");
+        }
+
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() ->
                 new TicketNotFoundException("Chamado não encontrado"));
 
@@ -86,7 +90,7 @@ public class CommentService {
             throw new ForbiddenException("Você não tem acesso a este chamado");
         }
 
-        if (!isClient && ticket.getAssignedTo() != null
+        if (user.getRole() == UserRole.AGENT && ticket.getAssignedTo() != null
                 && !ticket.getAssignedTo().getId().equals(user.getId())) {
             throw new ForbiddenException("Somente o responsável pode acessar os comentários deste chamado");
         }

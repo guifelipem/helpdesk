@@ -5,6 +5,7 @@ import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
+import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.exception.ErrorResponse;
@@ -68,7 +69,7 @@ public class TicketController {
 
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
     @GetMapping("/{id}")
-    @Operation(summary = "Consultar chamado", description = "CLIENT acessa apenas chamados próprios. AGENT e ADMIN acessam chamados sem responsável ou atribuídos a si; chamados atribuídos a outra pessoa são negados.")
+    @Operation(summary = "Consultar chamado", description = "CLIENT acessa apenas chamados próprios. AGENT acessa chamados sem responsável ou atribuídos a si. ADMIN pode supervisionar qualquer chamado em modo somente leitura.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Chamado encontrado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
             @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
@@ -79,9 +80,9 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.findById(id));
     }
 
-    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @PreAuthorize("hasRole('AGENT')")
     @PatchMapping("/{id}/status")
-    @Operation(summary = "Alterar status do chamado", description = "Permitido a AGENT e ADMIN, mas somente quando o usuário autenticado é o responsável. Transições aceitas: OPEN → IN_PROGRESS; IN_PROGRESS → WAITING_CLIENT ou RESOLVED; WAITING_CLIENT → IN_PROGRESS; WAITING_AGENT → IN_PROGRESS. Transições do cliente possuem endpoints específicos.")
+    @Operation(summary = "Alterar status do chamado", description = "Permitido somente ao AGENT responsável. Transições aceitas: OPEN → IN_PROGRESS; IN_PROGRESS → WAITING_CLIENT ou RESOLVED; WAITING_CLIENT → IN_PROGRESS; WAITING_AGENT → IN_PROGRESS. Transições do cliente possuem endpoints específicos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Status alterado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
             @ApiResponse(responseCode = "400", description = "Status ausente ou transição inválida"),
@@ -145,9 +146,9 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.sendToAgent(id));
     }
 
-    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @PreAuthorize("hasRole('AGENT')")
     @PatchMapping("/{id}/assign/me")
-    @Operation(summary = "Assumir chamado", description = "AGENT ou ADMIN tenta assumir atomicamente um chamado OPEN e ainda sem responsável. No sucesso, o chamado passa para IN_PROGRESS. A atualização condicional impede que dois usuários assumam o mesmo chamado simultaneamente.")
+    @Operation(summary = "Assumir chamado", description = "AGENT tenta assumir atomicamente um chamado OPEN e ainda sem responsável. No sucesso, o chamado passa para IN_PROGRESS. A atualização condicional impede que dois agentes assumam o mesmo chamado simultaneamente.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Chamado atribuído ao usuário autenticado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
             @ApiResponse(responseCode = "400", description = "Chamado sem responsável, mas não está em OPEN", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
@@ -159,6 +160,22 @@ public class TicketController {
     public ResponseEntity<TicketResponse> assignToMe(@Parameter(description = "ID do chamado", example = "42") @PathVariable Long id) {
 
         return ResponseEntity.ok(ticketService.assignToMe(id));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/return-to-queue")
+    @Operation(summary = "Devolver chamado para a fila", description = "Remove o agente responsável, altera o status para OPEN e registra a ação administrativa no histórico.")
+    public ResponseEntity<TicketResponse> returnToQueue(@PathVariable Long id) {
+        return ResponseEntity.ok(ticketService.returnToQueue(id));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/transfer")
+    @Operation(summary = "Transferir chamado", description = "Transfere um chamado ativo entre agentes sem atribuí-lo ao ADMIN.")
+    public ResponseEntity<TicketResponse> transfer(
+            @PathVariable Long id,
+            @RequestBody @Valid TransferTicketRequest request) {
+        return ResponseEntity.ok(ticketService.transfer(id, request));
     }
 
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")

@@ -198,4 +198,20 @@ class TicketHistoryServiceTest {
                         exception.getMessage()
                 );
         }
+        @Test
+        void shouldAllowAdminToReadHistoryFromTicketAssignedToAnotherUser() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User agent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(ticketHistoryRepository.findByTicketIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
+
+                assertEquals(0, ticketHistoryService.findByTicket(1L).size());
+        }
 }

@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -46,6 +47,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername((email));
 
+                if (!userDetails.isEnabled()) {
+                    throw new DisabledException("Usuário bloqueado");
+                }
+
                 if (jwtService.isTokenValid(token)) {
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -62,10 +67,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (Exception ex) {
+            String message = ex instanceof DisabledException
+                    ? "Usuário bloqueado"
+                    : "Token inválido ou expirado";
             ErrorResponse error = new ErrorResponse(
                     LocalDateTime.now(),
                     HttpStatus.UNAUTHORIZED.value(),
-                    "Token inválido ou expirado"
+                    message
             );
 
             response.setStatus(HttpStatus.UNAUTHORIZED.value());

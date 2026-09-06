@@ -6,6 +6,9 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.UserNotFoundException;
+import com.github.guifelipem.exception.UserHasActiveTicketsException;
+import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +35,9 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private TicketRepository ticketRepository;
+
     @InjectMocks
     private UserService userService;
 
@@ -50,6 +56,7 @@ class UserServiceTest {
         assertEquals(user.getName(), response.getContent().getFirst().name());
         assertEquals(user.getEmail(), response.getContent().getFirst().email());
         assertEquals(user.getRole(), response.getContent().getFirst().role());
+        assertEquals(user.isActive(), response.getContent().getFirst().active());
     }
 
     @Test
@@ -104,6 +111,47 @@ class UserServiceTest {
 
         assertEquals("Não é permitido atribuir a role de administrador", exception.getMessage());
         verify(userRepository, never()).save(user);
+    }
+
+    @Test
+    void shouldRejectAgentDemotionWhenActiveTicketsAreAssigned() {
+        User agent = buildUser(1L, UserRole.AGENT);
+        when(userRepository.findById(agent.getId())).thenReturn(Optional.of(agent));
+        when(ticketRepository.existsByAssignedToAndStatusNot(agent, TicketStatus.CLOSED)).thenReturn(true);
+
+        UserHasActiveTicketsException exception = assertThrows(
+                UserHasActiveTicketsException.class,
+                () -> userService.updateRole(agent.getId(), new UpdateUserRoleRequest(UserRole.CLIENT))
+        );
+
+        assertEquals(
+                "Não é possível alterar a role para CLIENT enquanto o agente possui chamados ativos. "
+                        + "Transfira os chamados para outro agente ou devolva-os para a fila antes de continuar.",
+                exception.getMessage()
+        );
+        verify(userRepository, never()).save(agent);
+    }
+
+    @Test
+    void shouldAllowAgentDemotionWhenThereAreNoActiveAssignedTickets() {
+        User agent = buildUser(1L, UserRole.AGENT);
+        when(userRepository.findById(agent.getId())).thenReturn(Optional.of(agent));
+        when(ticketRepository.existsByAssignedToAndStatusNot(agent, TicketStatus.CLOSED)).thenReturn(false);
+        when(userRepository.save(agent)).thenReturn(agent);
+
+        UserResponse response = userService.updateRole(agent.getId(), new UpdateUserRoleRequest(UserRole.CLIENT));
+
+        assertEquals(UserRole.CLIENT, response.role());
+    }
+
+    @Test
+    void shouldBlockAndUnblockUser() {
+        User client = buildUser(1L, UserRole.CLIENT);
+        when(userRepository.findById(client.getId())).thenReturn(Optional.of(client));
+        when(userRepository.save(client)).thenReturn(client);
+
+        assertEquals(false, userService.block(client.getId()).active());
+        assertEquals(true, userService.unblock(client.getId()).active());
     }
 
     private User buildUser(Long id, UserRole role) {

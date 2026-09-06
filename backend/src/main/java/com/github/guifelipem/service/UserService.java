@@ -6,6 +6,9 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.UserNotFoundException;
+import com.github.guifelipem.exception.UserHasActiveTicketsException;
+import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
         private final UserRepository userRepository;
+        private final TicketRepository ticketRepository;
 
         public Page<UserResponse> findAll(UserRole role, String search, Pageable pageable) {
                 Page<User> users = userRepository.findAllWithFilters(role, search, pageable);
@@ -36,6 +40,15 @@ public class UserService {
                         throw new ForbiddenException("Não é permitido atribuir a role de administrador");
                 }
 
+                if (user.getRole() == UserRole.AGENT
+                        && request.role() == UserRole.CLIENT
+                        && ticketRepository.existsByAssignedToAndStatusNot(user, TicketStatus.CLOSED)) {
+                        throw new UserHasActiveTicketsException(
+                                "Não é possível alterar a role para CLIENT enquanto o agente possui chamados ativos. "
+                                        + "Transfira os chamados para outro agente ou devolva-os para a fila antes de continuar."
+                        );
+                }
+
                 user.setRole(request.role());
 
                 User updatedUser = userRepository.save(user);
@@ -43,12 +56,33 @@ public class UserService {
                 return toResponse(updatedUser);
         }
 
+        public UserResponse block(Long userId) {
+                return setActive(userId, false);
+        }
+
+        public UserResponse unblock(Long userId) {
+                return setActive(userId, true);
+        }
+
+        private UserResponse setActive(Long userId, boolean active) {
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
+
+                if (user.getRole() == UserRole.ADMIN) {
+                        throw new ForbiddenException("Não é permitido bloquear ou desbloquear um administrador");
+                }
+
+                user.setActive(active);
+                return toResponse(userRepository.save(user));
+        }
+
         private UserResponse toResponse(User user) {
                 return new UserResponse(
                         user.getId(),
                         user.getName(),
                         user.getEmail(),
-                        user.getRole()
+                        user.getRole(),
+                        user.isActive()
                 );
         }
 }

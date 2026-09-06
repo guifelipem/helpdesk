@@ -5,6 +5,7 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.EmailAlreadyExistsException;
 import com.github.guifelipem.exception.InvalidCredentialsException;
+import com.github.guifelipem.exception.UserBlockedException;
 import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class AuthService {
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(UserRole.CLIENT)
+                .active(true)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -58,6 +60,10 @@ public class AuthService {
 
         if (!passwordMatches) {
             throw new InvalidCredentialsException("Email ou senha inválidos");
+        }
+
+        if (!user.isActive()) {
+            throw new UserBlockedException("Usuário bloqueado");
         }
 
         String token = jwtService.generateToken(user.getEmail());

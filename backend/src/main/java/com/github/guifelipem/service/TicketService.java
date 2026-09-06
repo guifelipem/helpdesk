@@ -6,6 +6,7 @@ import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
+import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
@@ -15,10 +16,13 @@ import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
+import com.github.guifelipem.exception.InvalidTicketManagementException;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
+import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
+import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,6 +40,7 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final AuthenticatedUserProvider authenticatedUserProvider;
     private final TicketHistoryRepository ticketHistoryRepository;
+    private final UserRepository userRepository;
 
     public TicketResponse create(CreateTicketRequest request) {
 
@@ -112,7 +117,7 @@ public class TicketService {
             throw new ForbiddenException("Você não tem permissão para visualizar este chamado");
         }
 
-        if (user.getRole() != UserRole.CLIENT && isAssignedToAnotherUser(ticket, user)) {
+        if (user.getRole() == UserRole.AGENT && isAssignedToAnotherUser(ticket, user)) {
             throw new ForbiddenException("Somente o responsável pode visualizar este chamado");
         }
 
@@ -128,6 +133,10 @@ public class TicketService {
 
         if (ticket.getAssignedTo() == null || !ticket.getAssignedTo().getId().equals(user.getId())) {
             throw new ForbiddenException("Somente o responsável pode alterar o status deste chamado");
+        }
+
+        if (user.getRole() != null && user.getRole() != UserRole.AGENT) {
+            throw new ForbiddenException("Somente agentes podem alterar o status operacional de chamados");
         }
 
         TicketStatus currentStatus = ticket.getStatus();
@@ -259,6 +268,11 @@ public class TicketService {
     @Transactional
     public TicketResponse assignToMe(Long ticketId) {
         User agent = authenticatedUserProvider.getAuthenticatedUser();
+
+        if (agent.getRole() != null && agent.getRole() != UserRole.AGENT) {
+            throw new ForbiddenException("Somente agentes podem assumir chamados");
+        }
+
         LocalDateTime assignmentTime = LocalDateTime.now();
 
         int affectedRows = ticketRepository.assignIfAvailable(ticketId, agent, TicketStatus.OPEN, TicketStatus.IN_PROGRESS, assignmentTime);
@@ -279,6 +293,92 @@ public class TicketService {
         createHistory(ticketUpdated, TicketHistoryAction.TICKET_ASSIGNED, null, agent.getName(), agent);
 
         return toResponse(ticketUpdated);
+    }
+
+    @Transactional
+    public TicketResponse returnToQueue(Long ticketId) {
+        Ticket ticket = findTicketById(ticketId);
+        User admin = requireAdmin();
+
+        if (ticket.getAssignedTo() == null) {
+            throw new InvalidTicketManagementException("O chamado já está na fila e não possui agente responsável");
+        }
+
+        if (!canBeAdministrativelyReassigned(ticket.getStatus())) {
+            throw new InvalidTicketManagementException(
+                    "Chamados com status " + ticket.getStatus() + " não podem ser devolvidos para a fila"
+            );
+        }
+
+        User previousAgent = ticket.getAssignedTo();
+        TicketStatus previousStatus = ticket.getStatus();
+        ticket.setAssignedTo(null);
+        ticket.setStatus(TicketStatus.OPEN);
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        if (previousStatus != TicketStatus.OPEN) {
+            createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED,
+                    previousStatus.name(), TicketStatus.OPEN.name(), admin);
+        }
+        createHistory(savedTicket, TicketHistoryAction.TICKET_RETURNED_TO_QUEUE,
+                previousAgent.getName(), "FILA",
+                "Agente removido: " + previousAgent.getName() + " (ID " + previousAgent.getId() + ")", admin);
+
+        return toResponse(savedTicket);
+    }
+
+    @Transactional
+    public TicketResponse transfer(Long ticketId, TransferTicketRequest request) {
+        Ticket ticket = findTicketById(ticketId);
+        User admin = requireAdmin();
+
+        if (ticket.getAssignedTo() == null) {
+            throw new InvalidTicketManagementException("Apenas chamados atribuídos podem ser transferidos");
+        }
+
+        if (!canBeAdministrativelyReassigned(ticket.getStatus())) {
+            throw new InvalidTicketManagementException(
+                    "Chamados com status " + ticket.getStatus() + " não podem ser transferidos"
+            );
+        }
+
+        User targetAgent = userRepository.findById(request.agentId())
+                .orElseThrow(() -> new UserNotFoundException("Agente de destino não encontrado"));
+
+        if (targetAgent.getRole() != UserRole.AGENT) {
+            throw new InvalidTicketManagementException("O usuário de destino precisa ter a role AGENT");
+        }
+
+        if (!targetAgent.isActive()) {
+            throw new InvalidTicketManagementException("O agente de destino está bloqueado");
+        }
+
+        User previousAgent = ticket.getAssignedTo();
+        if (previousAgent.getId().equals(targetAgent.getId())) {
+            throw new InvalidTicketManagementException("O agente de destino já é o responsável pelo chamado");
+        }
+
+        TicketStatus previousStatus = ticket.getStatus();
+        ticket.setAssignedTo(targetAgent);
+        if (previousStatus == TicketStatus.OPEN) {
+            ticket.setStatus(TicketStatus.IN_PROGRESS);
+        }
+        ticket.setUpdatedAt(LocalDateTime.now());
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        if (previousStatus != savedTicket.getStatus()) {
+            createHistory(savedTicket, TicketHistoryAction.STATUS_CHANGED,
+                    previousStatus.name(), savedTicket.getStatus().name(), admin);
+        }
+        createHistory(savedTicket, TicketHistoryAction.TICKET_TRANSFERRED,
+                previousAgent.getName(), targetAgent.getName(),
+                "Transferência de " + previousAgent.getName() + " (ID " + previousAgent.getId()
+                        + ") para " + targetAgent.getName() + " (ID " + targetAgent.getId() + ")", admin);
+
+        return toResponse(savedTicket);
     }
 
     @Transactional(readOnly = true)
@@ -325,6 +425,21 @@ public class TicketService {
     private boolean isAssignedToAnotherUser(Ticket ticket, User user) {
         return ticket.getAssignedTo() != null
                 && !ticket.getAssignedTo().getId().equals(user.getId());
+    }
+
+    private User requireAdmin() {
+        User user = authenticatedUserProvider.getAuthenticatedUser();
+        if (user.getRole() != UserRole.ADMIN) {
+            throw new ForbiddenException("Somente administradores podem gerenciar a atribuição de chamados");
+        }
+        return user;
+    }
+
+    private boolean canBeAdministrativelyReassigned(TicketStatus status) {
+        return status == TicketStatus.OPEN
+                || status == TicketStatus.IN_PROGRESS
+                || status == TicketStatus.WAITING_CLIENT
+                || status == TicketStatus.WAITING_AGENT;
     }
 
     private void createHistory(Ticket ticket, TicketHistoryAction action, String oldValue, String newValue, User performedBy) {
