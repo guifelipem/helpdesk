@@ -4,10 +4,12 @@ import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.enums.TicketQueue;
 import com.github.guifelipem.exception.ErrorResponse;
 import com.github.guifelipem.service.TicketService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -207,6 +209,41 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.findAll(
                 status, priority, search, createPageable(page, size, sort)
         ));
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/queues/{queue}")
+    @Operation(
+            summary = "Consultar fila operacional",
+            description = "Retorna uma fila paginada do AGENT autenticado. Cada fila aplica escopo e ordenação próprios no backend."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página da fila operacional"),
+            @ApiResponse(responseCode = "400", description = "Fila ou paginação inválida"),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de AGENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<PageResponse<TicketResponse>> findQueue(
+            @Parameter(description = "Fila operacional", example = "WAITING_AGENT") @PathVariable TicketQueue queue,
+            @Parameter(description = "Índice da página, começando em zero", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Quantidade de itens por página", example = "10") @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(ticketService.findQueue(queue, PageRequest.of(page, size)));
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/queues/summary")
+    @Operation(
+            summary = "Consultar contadores das filas",
+            description = "Retorna, em uma única consulta agregada, os contadores das filas do AGENT autenticado."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Contadores das filas", content = @Content(schema = @Schema(implementation = TicketQueueSummaryResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de AGENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketQueueSummaryResponse> summarizeQueues() {
+        return ResponseEntity.ok(ticketService.summarizeQueues());
     }
 
     private Pageable createPageable(int page, int size, String sort) {

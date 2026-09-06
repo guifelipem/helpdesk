@@ -4,6 +4,7 @@ import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -67,6 +68,41 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
             String search,
             Pageable pageable
     );
+
+    @Query("""
+            SELECT t FROM Ticket t
+            WHERE t.assignedTo IS NULL
+            AND t.status = com.github.guifelipem.enums.TicketStatus.OPEN
+            ORDER BY
+                CASE t.priority
+                    WHEN com.github.guifelipem.enums.TicketPriority.HIGH THEN 0
+                    WHEN com.github.guifelipem.enums.TicketPriority.MEDIUM THEN 1
+                    WHEN com.github.guifelipem.enums.TicketPriority.LOW THEN 2
+                END,
+                t.createdAt ASC,
+                t.id ASC
+            """)
+    Page<Ticket> findAvailableForAgent(Pageable pageable);
+
+    Page<Ticket> findAllByAssignedToId(Long agentId, Pageable pageable);
+
+    Page<Ticket> findAllByAssignedToIdAndStatus(Long agentId, TicketStatus status, Pageable pageable);
+
+    @Query("""
+            SELECT new com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse(
+                COALESCE(SUM(CASE WHEN t.assignedTo IS NULL
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.OPEN THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.WAITING_CLIENT THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.WAITING_AGENT THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.RESOLVED THEN 1 ELSE 0 END), 0)
+            )
+            FROM Ticket t
+            """)
+    TicketQueueSummaryResponse summarizeQueuesForAgent(@Param("agentId") Long agentId);
 
     @Modifying(clearAutomatically = true)
     @Query("""

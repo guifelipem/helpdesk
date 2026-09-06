@@ -6,6 +6,7 @@ import type { UpdateTicketStatusRequest } from "../types/update-ticket-status-re
 import type { RejectResolutionRequest } from "../types/reject-resolution-request";
 import type { FindAllTicketsParams, FindMyTicketsParams } from "../types/find-all-tickets-params";
 import type { PageResponse } from "@/shared/types/page-response";
+import type { TicketQueue, TicketQueueParams, TicketQueueSummary } from "../types/ticket-queue.types";
 
 export async function createTicket(data: CreateTicketRequest) {
         const response = await api.post<Ticket>("/tickets", data);
@@ -82,6 +83,16 @@ export async function findAllTickets(params?: FindAllTicketsParams) {
         const response = await api.get<PageResponse<Ticket>>("/tickets", {
                 params,
         });
+        return response.data;
+}
+
+export async function findTicketQueue(queue: TicketQueue, params?: TicketQueueParams) {
+        const response = await api.get<PageResponse<Ticket>>(`/tickets/queues/${queue}`, { params });
+        return response.data;
+}
+
+export async function findTicketQueueSummary() {
+        const response = await api.get<TicketQueueSummary>("/tickets/queues/summary");
         return response.data;
 }
 
