@@ -14,6 +14,7 @@ export function TicketsPage() {
     const user = useAuthStore((state) => state.user);
 
     const isClient = user?.role === "CLIENT";
+    const isAdmin = user?.role === "ADMIN";
 
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState<TicketStatus | "">("");
@@ -95,11 +96,13 @@ export function TicketsPage() {
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75"><Sparkles className="size-3.5" /> Central de atendimento</div>
-                    <h1 className="text-3xl font-bold tracking-tight">Seus chamados</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{isAdmin ? "Supervisão de chamados" : isClient ? "Seus chamados" : "Fila de atendimento"}</h1>
                     <p className="mt-2 max-w-xl text-sm text-white/65">
                         {isClient
                             ? "Acompanhe os chamados que você abriu."
-                            : "Gerencie os chamados do sistema."
+                            : isAdmin
+                                ? "Visualize todos os chamados e gerencie suas atribuições sem participar do atendimento."
+                                : "Acompanhe chamados disponíveis e os atendimentos atribuídos a você."
                         }
                     </p>
                 </div>

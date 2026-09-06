@@ -25,9 +25,10 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
 
     const [isInternal, setIsInternal] = useState(false);
 
-    const canCreateInternalComment = user?.role === "AGENT" || user?.role === "ADMIN";
+    const isAdmin = user?.role === "ADMIN";
+    const canCreateInternalComment = user?.role === "AGENT";
 
-    const isTicketReadOnly = ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
+    const isTicketReadOnly = isAdmin || ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
 
     const { data: comments = [], isLoading, isError, error, refetch, isFetching, } = useComments(ticketId);
     const createCommentMutation = useCreateComment(ticketId);
@@ -140,7 +141,9 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
 
                 {isTicketReadOnly ? (
                     <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
-                        {ticketStatus === "RESOLVED"
+                        {isAdmin
+                            ? "Modo de supervisão: os comentários públicos e internos estão disponíveis somente para leitura."
+                            : ticketStatus === "RESOLVED"
                             ? "Este chamado aguarda a confirmação da resolução e não aceita novos comentários. Confirme ou rejeite a resolução acima."
                             : "Este chamado foi encerrado e não aceita novos comentários."}
                     </p>

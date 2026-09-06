@@ -5,6 +5,7 @@ import { RegisterPage } from "@/pages/register/register-page";
 import { TicketDetailsPage } from "@/pages/tickets/ticket-details-page";
 import { TicketsPage } from "@/pages/tickets/tickets-page";
 import { CreateTicketPage } from "@/pages/tickets/create-ticket-page";
+import { UsersPage } from "@/pages/users/users-page";
 import { ProtectedRoute } from "@/features/auth/components/protected.route"
 import { AppLayout } from "@/layouts/app-layout";
 
@@ -38,6 +39,10 @@ export const router = createBrowserRouter([
                     {
                         path: "/tickets/new",
                         element: <CreateTicketPage />,
+                    },
+                    {
+                        path: "/users",
+                        element: <UsersPage />,
                     }
                 ]
             }

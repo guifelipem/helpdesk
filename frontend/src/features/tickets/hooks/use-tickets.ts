@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 
-import { assignTicketToMe, closeTicket, createTicket, findAllTickets, findMyTickets, findTicketById, rejectTicketResolution, sendTicketToAgent, updateTicketStatus } from "../api/ticket.api";
+import { assignTicketToMe, closeTicket, createTicket, findAllTickets, findMyTickets, findTicketById, rejectTicketResolution, returnTicketToQueue, sendTicketToAgent, transferTicket, updateTicketStatus } from "../api/ticket.api";
 import type { FindAllTicketsParams } from "../types/find-all-tickets-params";
 import { ticketQueryKeys } from "../constants/ticket-query-keys";
 import { ticketHistoryQueryKeys } from "@/features/history/constants/ticket-history-query-keys";
@@ -147,4 +147,23 @@ export function useSendTicketToAgent() {
             });
         },
     });
+}
+
+function useInvalidateManagedTicket() {
+    const queryClient = useQueryClient();
+    return (ticket: Ticket) => {
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticket.id) });
+        queryClient.invalidateQueries({ queryKey: ticketHistoryQueryKeys.history(ticket.id) });
+    };
+}
+
+export function useReturnTicketToQueue() {
+    const invalidateTicket = useInvalidateManagedTicket();
+    return useMutation({ mutationFn: returnTicketToQueue, onSuccess: invalidateTicket });
+}
+
+export function useTransferTicket() {
+    const invalidateTicket = useInvalidateManagedTicket();
+    return useMutation({ mutationFn: transferTicket, onSuccess: invalidateTicket });
 }

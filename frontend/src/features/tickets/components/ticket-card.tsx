@@ -6,7 +6,7 @@ import type { Ticket } from "../types/ticket.types";
 import { formatDate } from "@/shared/utils/format-date";
 import { TicketPriorityBadge } from "./ticket-priority-badge";
 import { TicketStatusBadge } from "./ticket-status-badge";
-import { ArrowUpRight, CalendarDays, Ticket as TicketIcon } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Ticket as TicketIcon, UserCheck } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 
 type TicketCardProps = {
@@ -62,6 +62,12 @@ export function TicketCard({ ticket }: TicketCardProps) {
                     <CalendarDays className="size-3.5" /> Criado em{" "}
                     {formatDate(ticket.createdAt)}
                 </p>
+
+                {user?.role === "ADMIN" && (
+                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <UserCheck className="size-3.5" /> Responsável: {ticket.assignedTo?.name ?? "Fila de disponíveis"}
+                    </p>
+                )}
             </CardContent>
 
             <CardFooter className="justify-end border-border bg-muted/45">
