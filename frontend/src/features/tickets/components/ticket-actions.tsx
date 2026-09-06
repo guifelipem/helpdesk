@@ -9,6 +9,7 @@ import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 import { useAssignTicket, useUpdateTicketStatus, useCloseTicket, useRejectTicketResolution, useSendTicketToAgent } from "../hooks/use-tickets";
 import type { Ticket, TicketStatus } from "../types/ticket.types";
 import { Undo2 } from "lucide-react";
+import { AdminTicketActions } from "./admin-ticket-actions";
 
 type TicketActionsProps = { ticket: Ticket; };
 
@@ -32,7 +33,7 @@ export function TicketActions({ ticket }: TicketActionsProps) {
     );
 
     const isClient = user?.role === "CLIENT";
-    const canManageTicket = user?.role === "AGENT" || user?.role === "ADMIN";
+    const canManageTicket = user?.role === "AGENT";
 
     const isTicketOwner = user?.id === ticket.createdBy.id;
 
@@ -89,6 +90,10 @@ export function TicketActions({ ticket }: TicketActionsProps) {
     }
 
     const isPending = assignTicket.isPending || updateStatus.isPending || closeTicket.isPending || rejectResolution.isPending || sendToAgent.isPending;
+
+    if (user?.role === "ADMIN") {
+        return <AdminTicketActions ticket={ticket} />;
+    }
 
     if (isClient) {
         if (!isTicketOwner) {

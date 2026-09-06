@@ -59,6 +59,16 @@ export async function assignTicketToMe(id: number) {
         return response.data;
 }
 
+export async function returnTicketToQueue(id: number) {
+        const response = await api.patch<Ticket>(`/tickets/${id}/return-to-queue`);
+        return response.data;
+}
+
+export async function transferTicket({ id, agentId }: { id: number; agentId: number }) {
+        const response = await api.patch<Ticket>(`/tickets/${id}/transfer`, { agentId });
+        return response.data;
+}
+
 export async function findAllTickets(params?: FindAllTicketsParams) {
         const response = await api.get<PageResponse<Ticket>>("/tickets", {
                 params,

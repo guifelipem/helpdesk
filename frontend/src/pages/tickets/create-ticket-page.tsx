@@ -3,11 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TicketForm } from "@/features/tickets/components/ticket-form";
 import { useCreateTicket } from "@/features/tickets/hooks/use-tickets";
 import type { CreateTicketFormData } from "@/features/tickets/schemas/create-ticket.schema";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 import { ArrowLeft, PlusCircle } from "lucide-react";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 
 export function CreateTicketPage() {
+    const user = useAuthStore((state) => state.user);
     const navigate = useNavigate();
     const createTicketMutation = useCreateTicket();
 
@@ -23,6 +25,10 @@ export function CreateTicketPage() {
         createTicketMutation.error,
         "Não foi possível criar o chamado. Tente novamente."
     );
+
+    if (user?.role !== "CLIENT") {
+        return <Navigate to="/tickets" replace />;
+    }
 
     return (
         <div className="space-y-6">
