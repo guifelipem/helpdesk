@@ -5,6 +5,7 @@ import com.github.guifelipem.dto.ticket.CreateTicketRequest;
 import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
+import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
@@ -14,10 +15,12 @@ import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
+import com.github.guifelipem.exception.InvalidTicketManagementException;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
+import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +56,9 @@ class TicketServiceTest {
 
         @Mock
         private TicketHistoryRepository ticketHistoryRepository;
+
+        @Mock
+        private UserRepository userRepository;
 
         @InjectMocks
         private TicketService ticketService;
@@ -1229,5 +1235,97 @@ class TicketServiceTest {
 
                 assertEquals(1L, response.id());
                 assertEquals(user.getId(), response.createdBy().id());
+        }
+        @Test
+        void shouldAllowAdminToViewTicketAssignedToAnotherAgent() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User agent = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                User client = User.builder().id(3L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(1L).createdBy(client).assignedTo(agent).build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+
+                assertEquals(agent.getId(), ticketService.findById(1L).assignedTo().id());
+        }
+
+        @Test
+        void shouldRejectAdminTryingToAssumeTicket() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+
+                ForbiddenException exception = assertThrows(ForbiddenException.class, () -> ticketService.assignToMe(1L));
+
+                assertEquals("Somente agentes podem assumir chamados", exception.getMessage());
+                verify(ticketRepository, never()).assignIfAvailable(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldReturnAssignedTicketToQueueAndRegisterHistory() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User agent = User.builder().id(2L).name("Agente atual").role(UserRole.AGENT).build();
+                User client = User.builder().id(3L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(10L).createdBy(client).assignedTo(agent)
+                        .status(TicketStatus.WAITING_CLIENT).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.returnToQueue(10L);
+
+                assertNull(response.assignedTo());
+                assertEquals(TicketStatus.OPEN, response.status());
+                ArgumentCaptor<TicketHistory> captor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository, times(2)).save(captor.capture());
+                assertEquals(TicketHistoryAction.TICKET_RETURNED_TO_QUEUE,
+                        captor.getAllValues().get(1).getAction());
+                assertEquals(admin, captor.getAllValues().get(1).getPerformedBy());
+        }
+
+        @Test
+        void shouldTransferTicketBetweenActiveAgentsAndRegisterAdmin() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User previous = User.builder().id(2L).name("Anterior").role(UserRole.AGENT).build();
+                User target = User.builder().id(3L).name("Novo").role(UserRole.AGENT).active(true).build();
+                User client = User.builder().id(4L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(10L).createdBy(client).assignedTo(previous)
+                        .status(TicketStatus.IN_PROGRESS).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.transfer(10L, new TransferTicketRequest(target.getId()));
+
+                assertEquals(target.getId(), response.assignedTo().id());
+                assertEquals(TicketStatus.IN_PROGRESS, response.status());
+                ArgumentCaptor<TicketHistory> captor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(captor.capture());
+                assertEquals(TicketHistoryAction.TICKET_TRANSFERRED, captor.getValue().getAction());
+                assertEquals("Anterior", captor.getValue().getOldValue());
+                assertEquals("Novo", captor.getValue().getNewValue());
+                assertEquals(admin, captor.getValue().getPerformedBy());
+        }
+
+        @Test
+        void shouldRejectTransferToBlockedAgent() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User previous = User.builder().id(2L).name("Anterior").role(UserRole.AGENT).build();
+                User blocked = User.builder().id(3L).name("Bloqueado").role(UserRole.AGENT).active(false).build();
+                Ticket ticket = Ticket.builder().id(10L).assignedTo(previous).status(TicketStatus.IN_PROGRESS).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(userRepository.findById(blocked.getId())).thenReturn(Optional.of(blocked));
+
+                InvalidTicketManagementException exception = assertThrows(
+                        InvalidTicketManagementException.class,
+                        () -> ticketService.transfer(10L, new TransferTicketRequest(blocked.getId()))
+                );
+
+                assertEquals("O agente de destino está bloqueado", exception.getMessage());
+                verify(ticketRepository, never()).save(any());
         }
 }

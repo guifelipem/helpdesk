@@ -18,6 +18,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     List<Ticket> findByCreatedBy(User user);
 
+    boolean existsByAssignedToAndStatusNot(User assignedTo, TicketStatus status);
+
     @Query("""
             SELECT t FROM Ticket t
             WHERE (:status IS NULL OR t.status = :status)

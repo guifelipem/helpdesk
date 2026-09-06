@@ -28,9 +28,9 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CLIENT', 'AGENT')")
     @PostMapping
-    @Operation(summary = "Adicionar comentário", description = "CLIENT pode comentar apenas em chamado próprio e não pode criar comentário interno. AGENT e ADMIN só podem comentar quando forem o responsável. Chamados CLOSED não aceitam comentários.")
+    @Operation(summary = "Adicionar comentário", description = "CLIENT pode comentar apenas em chamado próprio e não pode criar comentário interno. AGENT só pode comentar quando for o responsável. ADMIN possui acesso somente leitura. Chamados RESOLVED ou CLOSED não aceitam comentários.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Comentário criado", content = @Content(schema = @Schema(implementation = CommentResponse.class))),
             @ApiResponse(responseCode = "400", description = "Dados do comentário inválidos"),
@@ -46,7 +46,7 @@ public class CommentController {
 
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
     @GetMapping
-    @Operation(summary = "Listar comentários", description = "Retorna comentários em ordem cronológica. CLIENT acessa apenas chamado próprio e não recebe comentários internos. AGENT e ADMIN podem acessar chamado sem responsável ou atribuído a si, mas não um chamado atribuído a outra pessoa.")
+    @Operation(summary = "Listar comentários", description = "Retorna comentários em ordem cronológica. CLIENT acessa apenas chamado próprio e não recebe comentários internos. AGENT acessa chamado sem responsável ou atribuído a si. ADMIN pode supervisionar todos os chamados e recebe comentários públicos e internos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Comentários do chamado"),
             @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),

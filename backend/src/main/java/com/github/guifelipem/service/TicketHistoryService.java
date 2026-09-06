@@ -38,7 +38,7 @@ public class TicketHistoryService {
             throw new ForbiddenException("Você não tem permissão para acessar o histórico deste chamado");
         }
 
-        if (user.getRole() != UserRole.CLIENT && ticket.getAssignedTo() != null
+        if (user.getRole() == UserRole.AGENT && ticket.getAssignedTo() != null
                 && !ticket.getAssignedTo().getId().equals(user.getId())) {
             throw new ForbiddenException("Somente o responsável pode acessar o histórico deste chamado");
         }

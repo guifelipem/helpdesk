@@ -522,4 +522,36 @@ public class CommentServiceTest {
                         exception.getMessage()
                 );
         }
+        @Test
+        void shouldAllowAdminToReadPublicAndInternalCommentsFromAnyTicket() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User responsible = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                User client = User.builder().id(3L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(1L).createdBy(client).assignedTo(responsible).build();
+                Comment internal = Comment.builder().id(1L).ticket(ticket).user(responsible)
+                        .message("Nota interna").isInternal(true).build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(commentRepository.findByTicketIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(internal));
+
+                List<CommentResponse> response = commentService.findByTicket(1L);
+
+                assertEquals(1, response.size());
+                assertEquals(true, response.getFirst().isInternal());
+        }
+
+        @Test
+        void shouldRejectAdminCommentEvenIfLegacyTicketIsAssignedToAdmin() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.create(1L, new CreateCommentRequest("Não permitido", true))
+                );
+
+                assertEquals("Administradores possuem acesso somente leitura aos comentários", exception.getMessage());
+                verify(commentRepository, never()).save(any());
+        }
 }

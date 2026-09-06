@@ -5,6 +5,7 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.EmailAlreadyExistsException;
 import com.github.guifelipem.exception.InvalidCredentialsException;
+import com.github.guifelipem.exception.UserBlockedException;
 import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.JwtService;
 import org.junit.jupiter.api.Test;
@@ -166,6 +167,24 @@ class AuthServiceTest {
                         "Email ou senha inválidos",
                         exception.getMessage()
                 );
+        }
+
+        @Test
+        void shouldRejectLoginForBlockedUser() {
+                LoginRequest request = new LoginRequest("bloqueado@email.com", "123456");
+                User user = User.builder()
+                        .email(request.email())
+                        .passwordHash("hash")
+                        .active(false)
+                        .build();
+
+                when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
+                when(passwordEncoder.matches(request.password(), user.getPasswordHash())).thenReturn(true);
+
+                UserBlockedException exception = assertThrows(UserBlockedException.class, () -> authService.login(request));
+
+                assertEquals("Usuário bloqueado", exception.getMessage());
+                verify(jwtService, org.mockito.Mockito.never()).generateToken(org.mockito.ArgumentMatchers.anyString());
         }
 
         @Test

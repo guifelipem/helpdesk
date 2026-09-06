@@ -12,11 +12,9 @@ public enum TicketStatus {
 
         return switch (this) {
 
-            case OPEN -> target == IN_PROGRESS;
+            case OPEN, WAITING_CLIENT, WAITING_AGENT -> target == IN_PROGRESS;
 
             case IN_PROGRESS -> target == WAITING_CLIENT || target == RESOLVED;
-
-            case WAITING_CLIENT, WAITING_AGENT -> target == IN_PROGRESS;
 
             case RESOLVED, CLOSED -> false;
         };

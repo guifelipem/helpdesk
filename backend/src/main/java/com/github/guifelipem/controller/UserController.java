@@ -62,4 +62,18 @@ public class UserController {
         ) {
                 return userService.updateRole(id, request);
         }
+
+        @PatchMapping("/{id}/block")
+        @PreAuthorize("hasRole('ADMIN')")
+        @Operation(summary = "Bloquear usuário", description = "Bloqueia um CLIENT ou AGENT e invalida imediatamente suas requisições autenticadas.")
+        public UserResponse block(@Parameter(description = "ID do usuário") @PathVariable Long id) {
+                return userService.block(id);
+        }
+
+        @PatchMapping("/{id}/unblock")
+        @PreAuthorize("hasRole('ADMIN')")
+        @Operation(summary = "Desbloquear usuário", description = "Restaura o acesso de um CLIENT ou AGENT.")
+        public UserResponse unblock(@Parameter(description = "ID do usuário") @PathVariable Long id) {
+                return userService.unblock(id);
+        }
 }
