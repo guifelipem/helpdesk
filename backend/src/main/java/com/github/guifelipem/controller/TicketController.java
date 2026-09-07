@@ -190,7 +190,7 @@ public class TicketController {
 
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @GetMapping
-    @Operation(summary = "Listar chamados", description = "Lista chamados com filtros e paginação. AGENT vê chamados sem responsável e os atribuídos a si. ADMIN vê todos os chamados. Permitido somente para AGENT e ADMIN.")
+    @Operation(summary = "Listar chamados", description = "Lista chamados com filtros e paginação. AGENT vê chamados sem responsável e os atribuídos a si, sem poder filtrar por agente. ADMIN vê todos os chamados e pode filtrar pelo agente atribuído. Permitido somente para AGENT e ADMIN.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de chamados"),
             @ApiResponse(responseCode = "400", description = "Filtro, paginação ou ordenação inválidos"),
@@ -200,6 +200,7 @@ public class TicketController {
     public ResponseEntity<PageResponse<TicketResponse>> findAll(
             @Parameter(description = "Filtra pelo status") @RequestParam(required = false) TicketStatus status,
             @Parameter(description = "Filtra pela prioridade") @RequestParam(required = false) TicketPriority priority,
+            @Parameter(description = "Filtra pelo ID do agente atribuído. Aplicado somente para ADMIN") @RequestParam(required = false) Long agentId,
             @Parameter(description = "Busca parcial, sem diferenciar maiúsculas, no título ou descrição", example = "impressora") @RequestParam(required = false) String search,
             @Parameter(description = "Índice da página, começando em zero", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Quantidade de itens por página", example = "10") @RequestParam(defaultValue = "10") int size,
@@ -207,7 +208,7 @@ public class TicketController {
             ) {
 
         return ResponseEntity.ok(ticketService.findAll(
-                status, priority, search, createPageable(page, size, sort)
+                status, priority, agentId, search, createPageable(page, size, sort)
         ));
     }
 

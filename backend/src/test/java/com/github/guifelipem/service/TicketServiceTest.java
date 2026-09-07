@@ -970,9 +970,10 @@ class TicketServiceTest {
         }
 
         @Test
-        void shouldFindAllTicketsAsAdminSuccessfully() {
+        void shouldFindAllTicketsFilteredByAssignedAgentAsAdminSuccessfully() {
                 TicketStatus status = TicketStatus.OPEN;
                 TicketPriority priority = TicketPriority.LOW;
+                Long agentId = 2L;
                 String search = "Teste";
                 Pageable pageable = PageRequest.of(0, 10);
 
@@ -995,12 +996,12 @@ class TicketServiceTest {
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(admin);
 
-                when(ticketRepository.findAllWithFilters(status, priority, search, pageable))
+                when(ticketRepository.findAllWithFilters(status, priority, agentId, search, pageable))
                         .thenReturn(ticketsPage);
 
-                PageResponse<TicketResponse> response = ticketService.findAll(status, priority, search, pageable);
+                PageResponse<TicketResponse> response = ticketService.findAll(status, priority, agentId, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, search, pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, agentId, search, pageable);
                 verify(ticketRepository, never()).findAllVisibleToAgentWithFilters(any(), any(), any(), any(), any());
 
                 assertEquals(1, response.content().size());
@@ -1050,13 +1051,13 @@ class TicketServiceTest {
                 )).thenReturn(ticketsPage);
 
                 PageResponse<TicketResponse> response = ticketService.findAll(
-                        status, priority, search, pageable
+                        status, priority, 99L, search, pageable
                 );
 
                 verify(ticketRepository).findAllVisibleToAgentWithFilters(
                         agent.getId(), status, priority, "Sistema", pageable
                 );
-                verify(ticketRepository, never()).findAllWithFilters(any(), any(), any(), any());
+                verify(ticketRepository, never()).findAllWithFilters(any(), any(), any(), any(), any());
 
                 assertEquals(1, response.content().size());
                 assertEquals(ticket.getId(), response.content().getFirst().id());
@@ -1089,12 +1090,12 @@ class TicketServiceTest {
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(admin);
 
-                when(ticketRepository.findAllWithFilters(status, priority, "Teste", pageable))
+                when(ticketRepository.findAllWithFilters(status, priority, null, "Teste", pageable))
                         .thenReturn(ticketsPage);
 
-                ticketService.findAll(status, priority, search, pageable);
+                ticketService.findAll(status, priority, null, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, "Teste", pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, null, "Teste", pageable);
         }
 
         @ParameterizedTest
@@ -1124,12 +1125,12 @@ class TicketServiceTest {
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(admin);
 
-                when(ticketRepository.findAllWithFilters(status, priority, null, pageable))
+                when(ticketRepository.findAllWithFilters(status, priority, null, null, pageable))
                         .thenReturn(ticketsPage);
 
-                ticketService.findAll(status, priority, search, pageable);
+                ticketService.findAll(status, priority, null, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, null, pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, null, null, pageable);
         }
 
         @Test

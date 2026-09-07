@@ -403,6 +403,7 @@ public class TicketService {
     public PageResponse<TicketResponse> findAll(
             TicketStatus status,
             TicketPriority priority,
+            Long agentId,
             String search,
             Pageable pageable
     ) {
@@ -425,6 +426,7 @@ public class TicketService {
             tickets = ticketRepository.findAllWithFilters(
                     status,
                     priority,
+                    agentId,
                     normalizedSearch,
                     pageable
             );

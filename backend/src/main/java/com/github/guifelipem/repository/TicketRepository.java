@@ -42,13 +42,20 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
             SELECT t FROM Ticket t
             WHERE (:status IS NULL OR t.status = :status)
             AND (:priority IS NULL OR t.priority = :priority)
+            AND (:agentId IS NULL OR t.assignedTo.id = :agentId)
             AND (
                 CAST(:search AS string) IS NULL OR
                 LOWER(t.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR
                 LOWER(t.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
             )
             """)
-    Page<Ticket> findAllWithFilters(TicketStatus status, TicketPriority priority, String search, Pageable pageable);
+    Page<Ticket> findAllWithFilters(
+            TicketStatus status,
+            TicketPriority priority,
+            Long agentId,
+            String search,
+            Pageable pageable
+    );
 
     @Query("""
     SELECT t FROM Ticket t
