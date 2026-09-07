@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { login, getMe } from "@/features/auth/api/auth.api";
 import { loginSchema, type LoginFormData } from "@/features/auth/schemas/login.schema";
@@ -12,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Headphones, LockKeyhole, Mail } from "lucide-react";
+import { Headphones, Mail } from "lucide-react";
 import { ThemeToggle } from "@/features/theme/components/theme-toggle";
+import { PasswordInput } from "@/features/auth/components/password-input";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -96,19 +98,14 @@ export function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
+              <PasswordInput
                   id="password"
-                  type="password"
                   autoComplete="current-password"
                   placeholder="Sua senha"
-                  className="pl-10"
                   aria-invalid={!!form.formState.errors.password}
                   aria-describedby={form.formState.errors.password ? "password-error" : undefined}
                   {...form.register("password")}
-                />
-              </div>
+              />
               {form.formState.errors.password && (
                 <p id="password-error" role="alert" className="text-sm text-destructive">
                   {form.formState.errors.password.message}
@@ -127,6 +124,13 @@ export function LoginPage() {
             >
               {loginMutation.isPending ? "Entrando..." : "Entrar"}
             </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Ainda não tem uma conta?{" "}
+              <Link to="/register" className="font-semibold text-primary-strong underline-offset-4 hover:underline">
+                Cadastre-se
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
