@@ -3,6 +3,8 @@ package com.github.guifelipem;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardSummary;
+import com.github.guifelipem.dto.ticket.AgentActiveTicketsResponse;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
@@ -23,6 +25,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -147,6 +150,61 @@ class GuifelipemApplicationTests {
 		assertEquals(2, summary.waitingClient());
 		assertEquals(1, summary.waitingAgent());
 		assertEquals(1, summary.resolved());
+	}
+
+	@Test
+	void shouldSummarizeAdminDashboardAndCountResolvedTicketsAsActive() {
+		LocalDateTime now = LocalDateTime.now();
+		User client = saveClient("admin-dashboard-client@example.com", now);
+		User firstAgent = saveAgent("admin-dashboard-agent-1@example.com", now);
+		User secondAgent = saveAgent("admin-dashboard-agent-2@example.com", now);
+		User agentWithoutTickets = saveAgent("admin-dashboard-agent-3@example.com", now);
+
+		saveTicket(client, null, "Sem responsável", TicketStatus.OPEN,
+				TicketPriority.HIGH, now, now);
+		saveTicket(client, firstAgent, "Em andamento", TicketStatus.IN_PROGRESS,
+				TicketPriority.HIGH, now, now);
+		saveTicket(client, firstAgent, "Aguardando cliente", TicketStatus.WAITING_CLIENT,
+				TicketPriority.MEDIUM, now, now);
+		saveTicket(client, secondAgent, "Aguardando agente", TicketStatus.WAITING_AGENT,
+				TicketPriority.MEDIUM, now, now);
+		saveTicket(client, secondAgent, "Resolvido ativo", TicketStatus.RESOLVED,
+				TicketPriority.LOW, now, now);
+		saveTicket(client, firstAgent, "Fechado", TicketStatus.CLOSED,
+				TicketPriority.LOW, now, now);
+
+		AdminTicketDashboardSummary summary = ticketRepository.summarizeForAdminDashboard();
+		List<AgentActiveTicketsResponse> workloads = userRepository.countActiveTicketsByAgent();
+		Page<Ticket> firstAgentActiveTickets = ticketRepository.findAllWithFilters(
+				null, null, firstAgent.getId(), true, false, null, PageRequest.of(0, 10)
+		);
+		Page<Ticket> unassignedActiveTickets = ticketRepository.findAllWithFilters(
+				null, null, null, true, true, null, PageRequest.of(0, 10)
+		);
+
+		assertEquals(5, summary.totalActive());
+		assertEquals(1, summary.unassigned());
+		assertEquals(1, summary.inProgress());
+		assertEquals(1, summary.waitingClient());
+		assertEquals(1, summary.waitingAgent());
+		assertEquals(1, summary.resolved());
+		assertEquals(2, activeTicketsFor(workloads, firstAgent));
+		assertEquals(2, activeTicketsFor(workloads, secondAgent));
+		assertEquals(0, activeTicketsFor(workloads, agentWithoutTickets));
+		assertEquals(2, firstAgentActiveTickets.getTotalElements());
+		assertTrue(firstAgentActiveTickets.stream().allMatch(
+				ticket -> ticket.getAssignedTo().getId().equals(firstAgent.getId())
+		));
+		assertEquals(1, unassignedActiveTickets.getTotalElements());
+		assertTrue(unassignedActiveTickets.getContent().getFirst().getAssignedTo() == null);
+	}
+
+	private long activeTicketsFor(List<AgentActiveTicketsResponse> workloads, User agent) {
+		return workloads.stream()
+				.filter(workload -> workload.agentId().equals(agent.getId()))
+				.findFirst()
+				.orElseThrow()
+				.activeTickets();
 	}
 
 	private User saveClient(String email, LocalDateTime createdAt) {

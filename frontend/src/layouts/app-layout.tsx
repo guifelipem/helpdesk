@@ -1,4 +1,4 @@
-import { Headphones, House, Inbox, ListChecks, LogOut, Ticket, UserRound, UsersRound } from "lucide-react";
+import { Headphones, House, Inbox, LayoutDashboard, ListChecks, LogOut, Ticket, UserRound, UsersRound } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/auth.store";
@@ -64,10 +64,16 @@ export function AppLayout() {
                             </NavLink>
                         </>
                     ) : (
-                        <NavLink to="/tickets" className={navClass}>
-                            <Ticket className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
-                            Chamados
-                        </NavLink>
+                        <>
+                            <NavLink to="/dashboard" className={navClass}>
+                                <LayoutDashboard className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
+                                Dashboard
+                            </NavLink>
+                            <NavLink to="/tickets" className={navClass}>
+                                <Ticket className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
+                                Chamados
+                            </NavLink>
+                        </>
                     )}
 
                     {user?.role === "ADMIN" && (

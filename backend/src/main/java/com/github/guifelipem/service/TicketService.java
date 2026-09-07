@@ -8,6 +8,9 @@ import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.dto.ticket.TransferTicketRequest;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardSummary;
+import com.github.guifelipem.dto.ticket.AdminTicketPerformanceResponse;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
@@ -35,7 +38,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -403,6 +408,9 @@ public class TicketService {
     public PageResponse<TicketResponse> findAll(
             TicketStatus status,
             TicketPriority priority,
+            Long agentId,
+            Boolean active,
+            Boolean unassigned,
             String search,
             Pageable pageable
     ) {
@@ -425,6 +433,9 @@ public class TicketService {
             tickets = ticketRepository.findAllWithFilters(
                     status,
                     priority,
+                    agentId,
+                    Boolean.TRUE.equals(active),
+                    Boolean.TRUE.equals(unassigned),
                     normalizedSearch,
                     pageable
             );
@@ -463,6 +474,55 @@ public class TicketService {
     public TicketQueueSummaryResponse summarizeQueues() {
         User agent = requireAgent();
         return ticketRepository.summarizeQueuesForAgent(agent.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public AdminTicketDashboardResponse summarizeAdminDashboard() {
+        AdminTicketDashboardSummary summary = ticketRepository.summarizeForAdminDashboard();
+
+        return new AdminTicketDashboardResponse(
+                summary.totalActive(),
+                summary.unassigned(),
+                summary.inProgress(),
+                summary.waitingClient(),
+                summary.waitingAgent(),
+                summary.resolved(),
+                userRepository.countActiveTicketsByAgent(),
+                ticketRepository.findRequiringAdminAttention(
+                        LocalDateTime.now().minusHours(72),
+                        PageRequest.of(0, 5)
+                ).getContent().stream().map(this::toResponse).toList()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AdminTicketPerformanceResponse summarizeAdminPerformance(LocalDateTime from, LocalDateTime to) {
+        if (!from.isBefore(to)) {
+            throw new InvalidTicketManagementException("O início do período deve ser anterior ao fim");
+        }
+
+        long created = ticketRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from, to);
+        long resolved = ticketHistoryRepository.countDistinctTicketsTransitionedTo(
+                TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+        );
+        long closed = ticketHistoryRepository.countDistinctTicketsTransitionedTo(
+                TicketHistoryAction.STATUS_CHANGED, TicketStatus.CLOSED.name(), from, to
+        );
+        List<Object[]> resolutionTimes = ticketHistoryRepository.findFirstResolutionTimes(
+                TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+        );
+        Long averageResolutionMinutes = resolutionTimes.isEmpty() ? null : Math.round(
+                resolutionTimes.stream()
+                        .mapToLong(row -> Duration.between(
+                                (LocalDateTime) row[0], (LocalDateTime) row[1]
+                        ).toMinutes())
+                        .average()
+                        .orElse(0)
+        );
+
+        return new AdminTicketPerformanceResponse(
+                from, to, created, resolved, closed, averageResolutionMinutes
+        );
     }
 
     private Pageable withoutSort(Pageable pageable) {

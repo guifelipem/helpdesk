@@ -5,7 +5,7 @@ import { useAuthStore } from "../store/auth.store";
 export function InitialRoute() {
     const role = useAuthStore((state) => state.user?.role);
 
-    const destination = role === "CLIENT" ? "/home" : role === "AGENT" ? "/queues" : "/tickets";
+    const destination = role === "CLIENT" ? "/home" : role === "AGENT" ? "/queues" : "/dashboard";
 
     return <Navigate to={destination} replace />;
 }

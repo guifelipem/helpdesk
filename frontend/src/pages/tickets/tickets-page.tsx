@@ -3,30 +3,39 @@ import { useMyTickets, useTickets } from "@/features/tickets/hooks/use-tickets";
 import { TicketCard } from "@/features/tickets/components/ticket-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import type { TicketPriority, TicketStatus } from "@/features/tickets/types/ticket.types";
 import { TicketListSkeleton } from "@/features/tickets/components/ticket-card-skeleton";
 import { ErrorState } from "@/shared/components/error-state";
+import { useUsers } from "@/features/users/hooks/use-users";
 import { Filter, Plus, Search, Sparkles, Ticket as TicketIcon } from "lucide-react";
 
 export function TicketsPage() {
     const user = useAuthStore((state) => state.user);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const isClient = user?.role === "CLIENT";
     const isAdmin = user?.role === "ADMIN";
 
-    const [search, setSearch] = useState("");
-    const [status, setStatus] = useState<TicketStatus | "">("");
-    const [priority, setPriority] = useState<TicketPriority | "">("");
+    const [search, setSearch] = useState(searchParams.get("search") ?? "");
+    const [status, setStatus] = useState<TicketStatus | "">((searchParams.get("status") as TicketStatus | null) ?? "");
+    const [priority, setPriority] = useState<TicketPriority | "">((searchParams.get("priority") as TicketPriority | null) ?? "");
     const [page, setPage] = useState(0);
     const [isRetrying, setIsRetrying] = useState(false);
+    const agentId = isAdmin && searchParams.get("agentId") ? Number(searchParams.get("agentId")) : undefined;
+    const active = isAdmin && searchParams.get("active") === "true";
+    const unassigned = isAdmin && searchParams.get("unassigned") === "true";
+    const agentsQuery = useUsers({ role: "AGENT", page: 0, size: 100, sort: "name,asc" }, isAdmin);
 
     const allTicketsQuery = useTickets(
         {
             search: search || undefined,
             status: status || undefined,
             priority: priority || undefined,
+            agentId,
+            active: active || undefined,
+            unassigned: unassigned || undefined,
             page,
             size: 6,
         },
@@ -56,12 +65,13 @@ export function TicketsPage() {
 
     const pageData = isClient ? myTicketsQuery.data : allTicketsQuery.data;
 
-    const hasActiveFilters = search !== "" || status !== "" || priority !== "";
+    const hasActiveFilters = search !== "" || status !== "" || priority !== "" || agentId !== undefined || active || unassigned;
 
     function handleClearFilters() {
         setSearch("");
         setStatus("");
         setPriority("");
+        setSearchParams({});
         setPage(0);
     }
 
@@ -126,7 +136,7 @@ export function TicketsPage() {
 
             <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-[0_15px_40px_-30px_#4794b866] backdrop-blur-sm">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><Filter className="size-4 text-primary-strong" /> Filtros</div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className={`grid gap-3 md:grid-cols-2 ${isAdmin ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
                     <div className="relative">
                         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <label htmlFor="ticket-search" className="sr-only">Buscar chamados</label>
@@ -179,6 +189,30 @@ export function TicketsPage() {
                             <option value="HIGH">Alta</option>
                         </select>
                     </div>
+
+                    {isAdmin && (
+                        <div>
+                            <label htmlFor="ticket-agent" className="sr-only">Filtrar pelo agente atribuído</label>
+                            <select
+                                id="ticket-agent"
+                                value={agentId ?? ""}
+                                disabled={agentsQuery.isPending}
+                                onChange={(event) => {
+                                    const nextParams = new URLSearchParams(searchParams);
+                                    if (event.target.value) nextParams.set("agentId", event.target.value);
+                                    else nextParams.delete("agentId");
+                                    setSearchParams(nextParams);
+                                    setPage(0);
+                                }}
+                                className="h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
+                            >
+                                <option value="">Todos os agentes</option>
+                                {agentsQuery.data?.content.map((agent) => (
+                                    <option key={agent.id} value={agent.id}>{agent.name}{agent.active ? "" : " (bloqueado)"}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <Button
                         type="button"
