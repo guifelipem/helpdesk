@@ -42,7 +42,7 @@ export function LoginPage() {
       return user;
     },
     onSuccess: (user) => {
-      navigate(user.role === "CLIENT" ? "/home" : "/tickets");
+      navigate(user.role === "CLIENT" ? "/home" : user.role === "AGENT" ? "/tickets" : "/dashboard");
     },
   });
 

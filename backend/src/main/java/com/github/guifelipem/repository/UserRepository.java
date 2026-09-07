@@ -2,12 +2,14 @@ package com.github.guifelipem.repository;
 
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
+import com.github.guifelipem.dto.ticket.AgentActiveTicketsResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
@@ -29,4 +31,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
             String search,
             Pageable pageable
     );
+
+    @Query("""
+        SELECT new com.github.guifelipem.dto.ticket.AgentActiveTicketsResponse(
+            u.id,
+            u.name,
+            COUNT(t.id)
+        )
+        FROM User u
+        LEFT JOIN Ticket t ON t.assignedTo = u
+            AND t.status <> com.github.guifelipem.enums.TicketStatus.CLOSED
+        WHERE u.role = com.github.guifelipem.enums.UserRole.AGENT
+        GROUP BY u.id, u.name
+        ORDER BY COUNT(t.id) DESC, u.name ASC, u.id ASC
+        """)
+    List<AgentActiveTicketsResponse> countActiveTicketsByAgent();
 }

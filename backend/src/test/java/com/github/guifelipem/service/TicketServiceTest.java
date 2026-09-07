@@ -7,6 +7,10 @@ import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.dto.ticket.TransferTicketRequest;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardSummary;
+import com.github.guifelipem.dto.ticket.AgentActiveTicketsResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketPerformanceResponse;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
@@ -996,12 +1000,12 @@ class TicketServiceTest {
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(admin);
 
-                when(ticketRepository.findAllWithFilters(status, priority, agentId, search, pageable))
+                when(ticketRepository.findAllWithFilters(status, priority, agentId, true, true, search, pageable))
                         .thenReturn(ticketsPage);
 
-                PageResponse<TicketResponse> response = ticketService.findAll(status, priority, agentId, search, pageable);
+                PageResponse<TicketResponse> response = ticketService.findAll(status, priority, agentId, true, true, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, agentId, search, pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, agentId, true, true, search, pageable);
                 verify(ticketRepository, never()).findAllVisibleToAgentWithFilters(any(), any(), any(), any(), any());
 
                 assertEquals(1, response.content().size());
@@ -1051,13 +1055,13 @@ class TicketServiceTest {
                 )).thenReturn(ticketsPage);
 
                 PageResponse<TicketResponse> response = ticketService.findAll(
-                        status, priority, 99L, search, pageable
+                        status, priority, 99L, true, true, search, pageable
                 );
 
                 verify(ticketRepository).findAllVisibleToAgentWithFilters(
                         agent.getId(), status, priority, "Sistema", pageable
                 );
-                verify(ticketRepository, never()).findAllWithFilters(any(), any(), any(), any(), any());
+                verify(ticketRepository, never()).findAllWithFilters(any(), any(), any(), anyBoolean(), anyBoolean(), any(), any());
 
                 assertEquals(1, response.content().size());
                 assertEquals(ticket.getId(), response.content().getFirst().id());
@@ -1090,12 +1094,12 @@ class TicketServiceTest {
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(admin);
 
-                when(ticketRepository.findAllWithFilters(status, priority, null, "Teste", pageable))
+                when(ticketRepository.findAllWithFilters(status, priority, null, false, false, "Teste", pageable))
                         .thenReturn(ticketsPage);
 
-                ticketService.findAll(status, priority, null, search, pageable);
+                ticketService.findAll(status, priority, null, null, null, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, null, "Teste", pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, null, false, false, "Teste", pageable);
         }
 
         @ParameterizedTest
@@ -1125,12 +1129,12 @@ class TicketServiceTest {
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(admin);
 
-                when(ticketRepository.findAllWithFilters(status, priority, null, null, pageable))
+                when(ticketRepository.findAllWithFilters(status, priority, null, false, false, null, pageable))
                         .thenReturn(ticketsPage);
 
-                ticketService.findAll(status, priority, null, search, pageable);
+                ticketService.findAll(status, priority, null, null, null, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, null, null, pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, null, false, false, null, pageable);
         }
 
         @Test
@@ -1390,6 +1394,55 @@ class TicketServiceTest {
 
                 assertEquals(expected, response);
                 verify(ticketRepository).summarizeQueuesForAgent(agent.getId());
+        }
+
+        @Test
+        void shouldReturnAdminDashboardSummaryWithActiveTicketsByAgent() {
+                AdminTicketDashboardSummary summary = new AdminTicketDashboardSummary(15, 3, 5, 2, 1, 4);
+                List<AgentActiveTicketsResponse> activeByAgent = List.of(
+                        new AgentActiveTicketsResponse(2L, "Maria", 8),
+                        new AgentActiveTicketsResponse(3L, "João", 0)
+                );
+                when(ticketRepository.summarizeForAdminDashboard()).thenReturn(summary);
+                when(userRepository.countActiveTicketsByAgent()).thenReturn(activeByAgent);
+                when(ticketRepository.findRequiringAdminAttention(any(LocalDateTime.class), any(Pageable.class)))
+                        .thenReturn(Page.empty());
+
+                AdminTicketDashboardResponse response = ticketService.summarizeAdminDashboard();
+
+                assertEquals(summary.totalActive(), response.totalActive());
+                assertEquals(summary.unassigned(), response.unassigned());
+                assertEquals(summary.inProgress(), response.inProgress());
+                assertEquals(summary.waitingClient(), response.waitingClient());
+                assertEquals(summary.waitingAgent(), response.waitingAgent());
+                assertEquals(summary.resolved(), response.resolved());
+                assertEquals(activeByAgent, response.activeByAgent());
+        }
+
+        @Test
+        void shouldReturnPerformanceAndAverageResolutionTimeForPeriod() {
+                LocalDateTime from = LocalDateTime.of(2026, 8, 1, 0, 0);
+                LocalDateTime to = LocalDateTime.of(2026, 9, 1, 0, 0);
+                when(ticketRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from, to)).thenReturn(42L);
+                when(ticketHistoryRepository.countDistinctTicketsTransitionedTo(
+                        TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+                )).thenReturn(35L);
+                when(ticketHistoryRepository.countDistinctTicketsTransitionedTo(
+                        TicketHistoryAction.STATUS_CHANGED, TicketStatus.CLOSED.name(), from, to
+                )).thenReturn(31L);
+                when(ticketHistoryRepository.findFirstResolutionTimes(
+                        TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+                )).thenReturn(List.of(
+                        new Object[]{from, from.plusHours(12)},
+                        new Object[]{from, from.plusHours(24)}
+                ));
+
+                AdminTicketPerformanceResponse response = ticketService.summarizeAdminPerformance(from, to);
+
+                assertEquals(42, response.created());
+                assertEquals(35, response.resolved());
+                assertEquals(31, response.closed());
+                assertEquals(18 * 60, response.averageResolutionMinutes());
         }
 
         @Test

@@ -7,6 +7,8 @@ import com.github.guifelipem.dto.ticket.TicketResponse;
 import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.dto.ticket.TransferTicketRequest;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketPerformanceResponse;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.TicketQueue;
@@ -26,10 +28,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -201,6 +205,8 @@ public class TicketController {
             @Parameter(description = "Filtra pelo status") @RequestParam(required = false) TicketStatus status,
             @Parameter(description = "Filtra pela prioridade") @RequestParam(required = false) TicketPriority priority,
             @Parameter(description = "Filtra pelo ID do agente atribuído. Aplicado somente para ADMIN") @RequestParam(required = false) Long agentId,
+            @Parameter(description = "Quando true, retorna apenas chamados que ainda não estão CLOSED. Aplicado somente para ADMIN") @RequestParam(required = false) Boolean active,
+            @Parameter(description = "Quando true, retorna apenas chamados sem agente responsável. Aplicado somente para ADMIN") @RequestParam(required = false) Boolean unassigned,
             @Parameter(description = "Busca parcial, sem diferenciar maiúsculas, no título ou descrição", example = "impressora") @RequestParam(required = false) String search,
             @Parameter(description = "Índice da página, começando em zero", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Quantidade de itens por página", example = "10") @RequestParam(defaultValue = "10") int size,
@@ -208,7 +214,7 @@ public class TicketController {
             ) {
 
         return ResponseEntity.ok(ticketService.findAll(
-                status, priority, agentId, search, createPageable(page, size, sort)
+                status, priority, agentId, active, unassigned, search, createPageable(page, size, sort)
         ));
     }
 
@@ -245,6 +251,34 @@ public class TicketController {
     })
     public ResponseEntity<TicketQueueSummaryResponse> summarizeQueues() {
         return ResponseEntity.ok(ticketService.summarizeQueues());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/dashboard")
+    @Operation(
+            summary = "Consultar dashboard administrativo",
+            description = "Retorna contadores globais de chamados e a quantidade de chamados ativos por agente. Todo chamado que não esteja CLOSED é considerado ativo."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Indicadores administrativos", content = @Content(schema = @Schema(implementation = AdminTicketDashboardResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de ADMIN", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<AdminTicketDashboardResponse> summarizeAdminDashboard() {
+        return ResponseEntity.ok(ticketService.summarizeAdminDashboard());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/dashboard/performance")
+    @Operation(
+            summary = "Consultar desempenho administrativo no período",
+            description = "Retorna chamados criados, resolvidos e fechados, além do tempo médio entre criação e primeira resolução dentro do intervalo. O limite final é exclusivo."
+    )
+    public ResponseEntity<AdminTicketPerformanceResponse> summarizeAdminPerformance(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
+    ) {
+        return ResponseEntity.ok(ticketService.summarizeAdminPerformance(from, to));
     }
 
     private Pageable createPageable(int page, int size, String sort) {
