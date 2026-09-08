@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { formatDate } from "@/shared/utils/format-date";
 
@@ -31,10 +31,22 @@ function InfoItem({ label, value, icon }: InfoItemProps) {
 }
 
 export function TicketDetails({ ticket }: TicketDetailsProps) {
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    function handleBack() {
+        if (location.key === "default") {
+            navigate("/tickets", { replace: true });
+            return;
+        }
+
+        navigate(-1);
+    }
+
     return (
         <div className="space-y-6">
-            <Button asChild variant="outline">
-                <Link to="/tickets"><ArrowLeft /> Voltar para chamados</Link>
+            <Button type="button" variant="outline" onClick={handleBack}>
+                <ArrowLeft /> Voltar
             </Button>
 
             <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] text-white ring-0">

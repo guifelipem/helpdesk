@@ -11,6 +11,9 @@ import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.dto.ticket.AdminTicketDashboardResponse;
 import com.github.guifelipem.dto.ticket.AdminTicketDashboardSummary;
 import com.github.guifelipem.dto.ticket.AdminTicketPerformanceResponse;
+import com.github.guifelipem.dto.ticket.AgentTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AgentTicketDashboardSummary;
+import com.github.guifelipem.dto.ticket.AgentTicketPerformanceResponse;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
@@ -474,6 +477,47 @@ public class TicketService {
     public TicketQueueSummaryResponse summarizeQueues() {
         User agent = requireAgent();
         return ticketRepository.summarizeQueuesForAgent(agent.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public AgentTicketDashboardResponse summarizeAgentDashboard() {
+        User agent = requireAgent();
+        LocalDateTime to = LocalDateTime.now();
+        AgentTicketDashboardSummary summary = ticketRepository.summarizeDashboardForAgent(agent.getId());
+
+        return new AgentTicketDashboardResponse(
+                summary.active(),
+                summary.waitingClient(),
+                summary.waitingAgent(),
+                summary.resolved(),
+                summary.available(),
+                ticketRepository.findPriorityForAgent(
+                        agent.getId(), to.minusHours(72), PageRequest.of(0, 8)
+                ).getContent().stream().map(this::toResponse).toList()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AgentTicketPerformanceResponse summarizeAgentPerformance(LocalDateTime from, LocalDateTime to) {
+        User agent = requireAgent();
+        if (!from.isBefore(to)) {
+            throw new InvalidTicketManagementException("O início do período deve ser anterior ao fim");
+        }
+
+        long resolved = ticketHistoryRepository.countDistinctTicketsTransitionedToByAgent(
+                agent.getId(), TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+        );
+        List<Object[]> resolutionTimes = ticketHistoryRepository.findFirstResolutionTimesByAgent(
+                agent.getId(), TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+        );
+        Long averageResolutionMinutes = resolutionTimes.isEmpty() ? null : Math.round(
+                resolutionTimes.stream()
+                        .mapToLong(row -> Duration.between((LocalDateTime) row[0], (LocalDateTime) row[1]).toMinutes())
+                        .average()
+                        .orElse(0)
+        );
+
+        return new AgentTicketPerformanceResponse(from, to, resolved, averageResolutionMinutes);
     }
 
     @Transactional(readOnly = true)

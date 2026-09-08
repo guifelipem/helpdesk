@@ -6,6 +6,7 @@ import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.AdminTicketDashboardSummary;
+import com.github.guifelipem.dto.ticket.AgentTicketDashboardSummary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -117,6 +118,51 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
             FROM Ticket t
             """)
     TicketQueueSummaryResponse summarizeQueuesForAgent(@Param("agentId") Long agentId);
+
+    @Query("""
+            SELECT new com.github.guifelipem.dto.ticket.AgentTicketDashboardSummary(
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status <> com.github.guifelipem.enums.TicketStatus.CLOSED THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.WAITING_CLIENT THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.WAITING_AGENT THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.RESOLVED THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN t.assignedTo IS NULL
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.OPEN THEN 1 ELSE 0 END), 0)
+            )
+            FROM Ticket t
+            """)
+    AgentTicketDashboardSummary summarizeDashboardForAgent(@Param("agentId") Long agentId);
+
+    @Query("""
+            SELECT t FROM Ticket t
+            WHERE (
+                t.assignedTo.id = :agentId
+                AND t.status IN (
+                    com.github.guifelipem.enums.TicketStatus.IN_PROGRESS,
+                    com.github.guifelipem.enums.TicketStatus.WAITING_CLIENT,
+                    com.github.guifelipem.enums.TicketStatus.WAITING_AGENT
+                )
+                AND (t.priority = com.github.guifelipem.enums.TicketPriority.HIGH
+                    OR t.status = com.github.guifelipem.enums.TicketStatus.WAITING_AGENT
+                    OR t.updatedAt < :staleBefore)
+            ) OR (t.assignedTo IS NULL AND t.status = com.github.guifelipem.enums.TicketStatus.OPEN)
+            ORDER BY
+                CASE WHEN t.assignedTo.id = :agentId
+                    AND t.status = com.github.guifelipem.enums.TicketStatus.WAITING_AGENT THEN 0 ELSE 1 END,
+                CASE WHEN t.assignedTo.id = :agentId
+                    AND t.priority = com.github.guifelipem.enums.TicketPriority.HIGH THEN 0 ELSE 1 END,
+                CASE WHEN t.assignedTo.id = :agentId THEN 0 ELSE 1 END,
+                t.updatedAt ASC,
+                t.id ASC
+            """)
+    Page<Ticket> findPriorityForAgent(
+            @Param("agentId") Long agentId,
+            @Param("staleBefore") LocalDateTime staleBefore,
+            Pageable pageable
+    );
 
     @Query("""
             SELECT new com.github.guifelipem.dto.ticket.AdminTicketDashboardSummary(

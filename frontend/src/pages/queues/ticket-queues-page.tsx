@@ -1,6 +1,6 @@
 import { Headphones, Inbox, ListChecks, MessageCircleMore, TimerReset, BadgeCheck } from "lucide-react";
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,7 +70,10 @@ const initialPages: Record<TicketQueue, number> = {
 export function TicketQueuesPage() {
     const user = useAuthStore((state) => state.user);
     const isAgent = user?.role === "AGENT";
-    const [activeQueue, setActiveQueue] = useState<TicketQueue>("AVAILABLE");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const requestedQueue = searchParams.get("queue") as TicketQueue | null;
+    const initialQueue = queueTabs.some((queue) => queue.value === requestedQueue) ? requestedQueue! : "AVAILABLE";
+    const [activeQueue, setActiveQueue] = useState<TicketQueue>(initialQueue);
     const [pages, setPages] = useState<Record<TicketQueue, number>>(initialPages);
 
     const summaryQuery = useTicketQueueSummary({ enabled: isAgent });
@@ -95,6 +98,7 @@ export function TicketQueuesPage() {
 
     function changeQueue(queue: TicketQueue) {
         setActiveQueue(queue);
+        setSearchParams(queue === "AVAILABLE" ? {} : { queue });
         assignTicket.reset();
     }
 
