@@ -13,6 +13,7 @@ import { AgentDashboardPage } from "@/pages/dashboard/agent-dashboard-page";
 import { ProtectedRoute } from "@/features/auth/components/protected.route"
 import { InitialRoute } from "@/features/auth/components/initial-route";
 import { AppLayout } from "@/layouts/app-layout";
+import { AccountPage } from "@/pages/account/account-page";
 
 export const router = createBrowserRouter([
     {
@@ -64,6 +65,10 @@ export const router = createBrowserRouter([
                     {
                         path: "/users",
                         element: <UsersPage />,
+                    },
+                    {
+                        path: "/account",
+                        element: <AccountPage />,
                     }
                 ]
             }

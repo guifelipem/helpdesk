@@ -83,15 +83,20 @@ export function AppLayout() {
                         </NavLink>
                     )}
 
+                    <NavLink to="/account" className={navClass}>
+                        <UserRound className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
+                        Minha conta
+                    </NavLink>
+
                 </nav>
 
                 <div className="absolute bottom-6 left-5 right-5 hidden rounded-2xl border border-black/10 bg-white/30 p-3 dark:border-white/10 dark:bg-white/6 lg:block">
                     <div className="flex items-center gap-3">
                         <div className="flex size-9 items-center justify-center rounded-xl bg-white/55 text-[#173f52] dark:bg-secondary dark:text-[#dce9ff]"><UserRound className="size-4" /></div>
-                        <div className="min-w-0 flex-1">
+                        <NavLink to="/account" className="min-w-0 flex-1 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary">
                             <p className="truncate text-sm font-semibold">{user?.name}</p>
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#060c0f] dark:text-white/70">{user?.role}</p>
-                        </div>
+                        </NavLink>
                         <button type="button" onClick={logout} className="rounded-lg p-2 text-[#060c0f]/90 transition hover:bg-white/35 hover:text-[#060c0f] dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white" aria-label="Sair"><LogOut className="size-4" /></button>
                     </div>
                 </div>
