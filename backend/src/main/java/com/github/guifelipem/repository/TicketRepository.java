@@ -12,14 +12,25 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.List;
+
+import jakarta.persistence.LockModeType;
 
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     boolean existsByAssignedToAndStatusNot(User assignedTo, TicketStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM Ticket t WHERE t.assignedTo = :agent AND t.status <> :closedStatus ORDER BY t.id")
+    List<Ticket> findActiveAssignedToForUpdate(
+            @Param("agent") User agent,
+            @Param("closedStatus") TicketStatus closedStatus
+    );
 
     long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime from, LocalDateTime to);
 

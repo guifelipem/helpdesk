@@ -1,6 +1,8 @@
 package com.github.guifelipem.controller;
 
 import com.github.guifelipem.dto.user.UpdateUserRoleRequest;
+import com.github.guifelipem.dto.user.BlockUserRequest;
+import com.github.guifelipem.dto.user.UserActiveTicketsConflictResponse;
 import com.github.guifelipem.dto.user.UserResponse;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ErrorResponse;
@@ -65,9 +67,16 @@ public class UserController {
 
         @PatchMapping("/{id}/block")
         @PreAuthorize("hasRole('ADMIN')")
-        @Operation(summary = "Bloquear usuário", description = "Bloqueia um CLIENT ou AGENT e invalida imediatamente suas requisições autenticadas.")
-        public UserResponse block(@Parameter(description = "ID do usuário") @PathVariable Long id) {
-                return userService.block(id);
+        @Operation(summary = "Bloquear usuário", description = "Bloqueia um CLIENT ou AGENT. Se o AGENT possuir chamados não fechados, a chamada sem estratégia retorna 409 e activeTicketCount; repita informando TRANSFER ou RETURN_TO_QUEUE.")
+        @ApiResponses({
+                @ApiResponse(responseCode = "200", description = "Usuário bloqueado", content = @Content(schema = @Schema(implementation = UserResponse.class))),
+                @ApiResponse(responseCode = "409", description = "O agente possui chamados que precisam ser redistribuídos", content = @Content(schema = @Schema(implementation = UserActiveTicketsConflictResponse.class)))
+        })
+        public UserResponse block(
+                @Parameter(description = "ID do usuário") @PathVariable Long id,
+                @RequestBody(required = false) BlockUserRequest request
+        ) {
+                return userService.block(id, request);
         }
 
         @PatchMapping("/{id}/unblock")

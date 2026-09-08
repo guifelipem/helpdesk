@@ -1,15 +1,21 @@
 package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.user.UpdateUserRoleRequest;
+import com.github.guifelipem.dto.user.BlockUserRequest;
 import com.github.guifelipem.dto.user.UserResponse;
+import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
+import com.github.guifelipem.enums.AgentBlockAction;
+import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.UserNotFoundException;
 import com.github.guifelipem.exception.UserHasActiveTicketsException;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.repository.TicketRepository;
+import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.UserRepository;
+import com.github.guifelipem.security.AuthenticatedUserProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,6 +43,12 @@ class UserServiceTest {
 
     @Mock
     private TicketRepository ticketRepository;
+
+    @Mock
+    private TicketHistoryRepository ticketHistoryRepository;
+
+    @Mock
+    private AuthenticatedUserProvider authenticatedUserProvider;
 
     @InjectMocks
     private UserService userService;
@@ -147,11 +159,67 @@ class UserServiceTest {
     @Test
     void shouldBlockAndUnblockUser() {
         User client = buildUser(1L, UserRole.CLIENT);
+        when(userRepository.findByIdForUpdate(client.getId())).thenReturn(Optional.of(client));
         when(userRepository.findById(client.getId())).thenReturn(Optional.of(client));
         when(userRepository.save(client)).thenReturn(client);
 
-        assertEquals(false, userService.block(client.getId()).active());
+        assertEquals(false, userService.block(client.getId(), null).active());
         assertEquals(true, userService.unblock(client.getId()).active());
+    }
+
+    @Test
+    void shouldReportActiveTicketCountBeforeBlockingAgent() {
+        User agent = buildUser(1L, UserRole.AGENT);
+        Ticket resolved = buildTicket(10L, agent, TicketStatus.RESOLVED);
+        Ticket inProgress = buildTicket(11L, agent, TicketStatus.IN_PROGRESS);
+        when(userRepository.findByIdForUpdate(agent.getId())).thenReturn(Optional.of(agent));
+        when(ticketRepository.findActiveAssignedToForUpdate(agent, TicketStatus.CLOSED))
+                .thenReturn(List.of(resolved, inProgress));
+
+        UserHasActiveTicketsException exception = assertThrows(
+                UserHasActiveTicketsException.class,
+                () -> userService.block(agent.getId(), null)
+        );
+
+        assertEquals(2, exception.getActiveTicketCount());
+        assertEquals(true, agent.isActive());
+        verify(userRepository, never()).save(agent);
+    }
+
+    @Test
+    void shouldTransferResolvedTicketAndBlockAgentInOneOperation() {
+        User agent = buildUser(1L, UserRole.AGENT);
+        User target = buildUser(2L, UserRole.AGENT);
+        User admin = buildUser(3L, UserRole.ADMIN);
+        Ticket resolved = buildTicket(10L, agent, TicketStatus.RESOLVED);
+        when(userRepository.findByIdForUpdate(agent.getId())).thenReturn(Optional.of(agent));
+        when(userRepository.findByIdForUpdate(target.getId())).thenReturn(Optional.of(target));
+        when(ticketRepository.findActiveAssignedToForUpdate(agent, TicketStatus.CLOSED))
+                .thenReturn(List.of(resolved));
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+        when(ticketRepository.save(resolved)).thenReturn(resolved);
+        when(userRepository.save(agent)).thenReturn(agent);
+
+        UserResponse response = userService.block(agent.getId(),
+                new BlockUserRequest(AgentBlockAction.TRANSFER, target.getId()));
+
+        assertEquals(false, response.active());
+        assertEquals(target, resolved.getAssignedTo());
+        assertEquals(TicketStatus.RESOLVED, resolved.getStatus());
+        verify(ticketHistoryRepository).save(org.mockito.ArgumentMatchers.argThat(history ->
+                history.getDetails().contains("devido ao bloqueio do agente")
+        ));
+    }
+
+    private Ticket buildTicket(Long id, User assignedTo, TicketStatus status) {
+        return Ticket.builder()
+                .id(id)
+                .title("Chamado")
+                .description("Descrição")
+                .status(status)
+                .priority(TicketPriority.MEDIUM)
+                .assignedTo(assignedTo)
+                .build();
     }
 
     private User buildUser(Long id, UserRole role) {

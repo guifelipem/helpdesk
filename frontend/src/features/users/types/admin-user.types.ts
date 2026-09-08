@@ -24,3 +24,18 @@ export type FindUsersParams = {
     size?: number;
     sort?: string;
 };
+
+export type AgentBlockAction = "TRANSFER" | "RETURN_TO_QUEUE";
+
+export type BlockUserParams = {
+    userId: number;
+    action?: AgentBlockAction;
+    targetAgentId?: number;
+};
+
+export type ActiveTicketsConflictResponse = {
+    timestamp: string;
+    status: number;
+    message: string;
+    activeTicketCount: number;
+};
