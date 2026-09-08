@@ -1,5 +1,6 @@
 package com.github.guifelipem.exception;
 
+import com.github.guifelipem.dto.user.UserActiveTicketsConflictResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -105,11 +106,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserHasActiveTicketsException.class)
-    public ResponseEntity<ErrorResponse> handleUserHasActiveTickets(UserHasActiveTicketsException ex) {
-        ErrorResponse error = new ErrorResponse(
+    public ResponseEntity<UserActiveTicketsConflictResponse> handleUserHasActiveTickets(UserHasActiveTicketsException ex) {
+        UserActiveTicketsConflictResponse error = new UserActiveTicketsConflictResponse(
                 LocalDateTime.now(),
                 HttpStatus.CONFLICT.value(),
-                ex.getMessage()
+                ex.getMessage(),
+                ex.getActiveTicketCount()
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
