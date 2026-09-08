@@ -15,6 +15,10 @@ export const ticketQueryKeys = {
 
     queueSummary: () => [...ticketQueryKeys.queues(), "summary"] as const,
 
+    agentDashboard: () => [...ticketQueryKeys.all, "agent-dashboard"] as const,
+
+    agentPerformance: (from: string, to: string) => [...ticketQueryKeys.all, "agent-performance", from, to] as const,
+
     adminDashboard: () => [...ticketQueryKeys.all, "admin-dashboard"] as const,
 
     adminPerformance: (from: string, to: string) => [...ticketQueryKeys.all, "admin-performance", from, to] as const,

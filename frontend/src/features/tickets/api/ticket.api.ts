@@ -8,6 +8,7 @@ import type { FindAllTicketsParams, FindMyTicketsParams } from "../types/find-al
 import type { PageResponse } from "@/shared/types/page-response";
 import type { TicketQueue, TicketQueueParams, TicketQueueSummary } from "../types/ticket-queue.types";
 import type { AdminTicketDashboard, AdminTicketPerformance } from "../types/admin-dashboard.types";
+import type { AgentTicketDashboard, AgentTicketPerformance } from "../types/agent-dashboard.types";
 
 export async function createTicket(data: CreateTicketRequest) {
         const response = await api.post<Ticket>("/tickets", data);
@@ -94,6 +95,18 @@ export async function findTicketQueue(queue: TicketQueue, params?: TicketQueuePa
 
 export async function findTicketQueueSummary() {
         const response = await api.get<TicketQueueSummary>("/tickets/queues/summary");
+        return response.data;
+}
+
+export async function findAgentTicketDashboard() {
+        const response = await api.get<AgentTicketDashboard>("/tickets/agent/dashboard");
+        return response.data;
+}
+
+export async function findAgentTicketPerformance(from: string, to: string) {
+        const response = await api.get<AgentTicketPerformance>("/tickets/agent/dashboard/performance", {
+                params: { from, to },
+        });
         return response.data;
 }
 

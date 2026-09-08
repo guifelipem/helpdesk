@@ -43,9 +43,7 @@ export function LoginPage() {
 
       return user;
     },
-    onSuccess: (user) => {
-      navigate(user.role === "CLIENT" ? "/home" : user.role === "AGENT" ? "/tickets" : "/dashboard");
-    },
+    onSuccess: () => navigate("/", { replace: true }),
   });
 
   function handleSubmit(data: LoginFormData) {

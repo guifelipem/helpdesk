@@ -9,6 +9,7 @@ import { UsersPage } from "@/pages/users/users-page";
 import { ClientHomePage } from "@/pages/home/client-home-page";
 import { TicketQueuesPage } from "@/pages/queues/ticket-queues-page";
 import { AdminDashboardPage } from "@/pages/dashboard/admin-dashboard-page";
+import { AgentDashboardPage } from "@/pages/dashboard/agent-dashboard-page";
 import { ProtectedRoute } from "@/features/auth/components/protected.route"
 import { InitialRoute } from "@/features/auth/components/initial-route";
 import { AppLayout } from "@/layouts/app-layout";
@@ -39,6 +40,10 @@ export const router = createBrowserRouter([
                     {
                         path: "/dashboard",
                         element: <AdminDashboardPage />,
+                    },
+                    {
+                        path: "/agent/dashboard",
+                        element: <AgentDashboardPage />,
                     },
                     {
                         path: "/tickets",

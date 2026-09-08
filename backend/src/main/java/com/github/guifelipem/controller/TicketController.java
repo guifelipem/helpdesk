@@ -9,6 +9,8 @@ import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
 import com.github.guifelipem.dto.ticket.TransferTicketRequest;
 import com.github.guifelipem.dto.ticket.AdminTicketDashboardResponse;
 import com.github.guifelipem.dto.ticket.AdminTicketPerformanceResponse;
+import com.github.guifelipem.dto.ticket.AgentTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AgentTicketPerformanceResponse;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.TicketQueue;
@@ -251,6 +253,26 @@ public class TicketController {
     })
     public ResponseEntity<TicketQueueSummaryResponse> summarizeQueues() {
         return ResponseEntity.ok(ticketService.summarizeQueues());
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/agent/dashboard")
+    @Operation(
+            summary = "Consultar dashboard do agente",
+            description = "Retorna somente indicadores pessoais, desempenho recente e chamados que exigem prioridade do agente autenticado."
+    )
+    public ResponseEntity<AgentTicketDashboardResponse> summarizeAgentDashboard() {
+        return ResponseEntity.ok(ticketService.summarizeAgentDashboard());
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/agent/dashboard/performance")
+    @Operation(summary = "Consultar desempenho do agente no período")
+    public ResponseEntity<AgentTicketPerformanceResponse> summarizeAgentPerformance(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
+    ) {
+        return ResponseEntity.ok(ticketService.summarizeAgentPerformance(from, to));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

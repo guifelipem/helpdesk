@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 
-import { assignTicketToMe, closeTicket, createTicket, findAdminTicketDashboard, findAdminTicketPerformance, findAllTickets, findMyTickets, findTicketById, findTicketQueue, findTicketQueueSummary, rejectTicketResolution, returnTicketToQueue, sendTicketToAgent, transferTicket, updateTicketStatus } from "../api/ticket.api";
+import { assignTicketToMe, closeTicket, createTicket, findAdminTicketDashboard, findAdminTicketPerformance, findAgentTicketDashboard, findAgentTicketPerformance, findAllTickets, findMyTickets, findTicketById, findTicketQueue, findTicketQueueSummary, rejectTicketResolution, returnTicketToQueue, sendTicketToAgent, transferTicket, updateTicketStatus } from "../api/ticket.api";
 import type { FindAllTicketsParams, FindMyTicketsParams } from "../types/find-all-tickets-params";
 import { ticketQueryKeys } from "../constants/ticket-query-keys";
 import { ticketHistoryQueryKeys } from "@/features/history/constants/ticket-history-query-keys";
@@ -177,6 +177,22 @@ export function useTicketQueueSummary(
         queryKey: ticketQueryKeys.queueSummary(),
         queryFn: findTicketQueueSummary,
         ...options,
+    });
+}
+
+export function useAgentTicketDashboard(enabled = true) {
+    return useQuery({
+        queryKey: ticketQueryKeys.agentDashboard(),
+        queryFn: findAgentTicketDashboard,
+        enabled,
+    });
+}
+
+export function useAgentTicketPerformance(from: string, to: string, enabled = true) {
+    return useQuery({
+        queryKey: ticketQueryKeys.agentPerformance(from, to),
+        queryFn: () => findAgentTicketPerformance(from, to),
+        enabled,
     });
 }
 

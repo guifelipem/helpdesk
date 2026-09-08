@@ -50,7 +50,7 @@ export function AppLayout() {
                         </>
                     ) : user?.role === "AGENT" ? (
                         <>
-                            <NavLink to="/" end className={navClass}>
+                            <NavLink to="/agent/dashboard" className={navClass}>
                                 <House className="size-4 text-[#17475c] dark:text-[#8fd0ef]" />
                                 Início
                             </NavLink>

@@ -32,7 +32,7 @@ export function RegisterPage() {
       const user = await getMe();
       setUser(user);
     },
-    onSuccess: () => navigate("/home", { replace: true }),
+    onSuccess: () => navigate("/", { replace: true }),
   });
 
   const errorMessage = getApiErrorMessage(registerMutation.error, "Não foi possível criar sua conta. Tente novamente.");

@@ -29,6 +29,41 @@ public interface TicketHistoryRepository extends JpaRepository<TicketHistory, Lo
     );
 
     @Query("""
+            SELECT COUNT(DISTINCT h.ticket.id)
+            FROM TicketHistory h
+            WHERE h.action = :action
+            AND h.newValue = :newValue
+            AND h.performedBy.id = :agentId
+            AND h.createdAt >= :from
+            AND h.createdAt < :to
+            """)
+    long countDistinctTicketsTransitionedToByAgent(
+            @Param("agentId") Long agentId,
+            @Param("action") TicketHistoryAction action,
+            @Param("newValue") String newValue,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    @Query("""
+            SELECT h.ticket.createdAt, MIN(h.createdAt)
+            FROM TicketHistory h
+            WHERE h.action = :action
+            AND h.newValue = :newValue
+            AND h.performedBy.id = :agentId
+            AND h.createdAt >= :from
+            AND h.createdAt < :to
+            GROUP BY h.ticket.id, h.ticket.createdAt
+            """)
+    List<Object[]> findFirstResolutionTimesByAgent(
+            @Param("agentId") Long agentId,
+            @Param("action") TicketHistoryAction action,
+            @Param("newValue") String newValue,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    @Query("""
             SELECT h.ticket.createdAt, MIN(h.createdAt)
             FROM TicketHistory h
             WHERE h.action = :action
