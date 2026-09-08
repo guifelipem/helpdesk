@@ -1,6 +1,6 @@
 import { api } from "@/shared/api/client";
 
-import type { AdminUser, FindUsersParams, UsersPageResponse } from "../types/admin-user.types";
+import type { AdminUser, BlockUserParams, FindUsersParams, UsersPageResponse } from "../types/admin-user.types";
 
 export async function findUsers(params?: FindUsersParams) {
     const response = await api.get<UsersPageResponse>("/users", { params });
@@ -25,8 +25,9 @@ export async function updateUserRole({ userId, role }: { userId: number; role: "
     return response.data;
 }
 
-export async function blockUser(userId: number) {
-    const response = await api.patch<AdminUser>(`/users/${userId}/block`);
+export async function blockUser({ userId, action, targetAgentId }: BlockUserParams) {
+    const body = action ? { action, targetAgentId } : undefined;
+    const response = await api.patch<AdminUser>(`/users/${userId}/block`, body);
     return response.data;
 }
 

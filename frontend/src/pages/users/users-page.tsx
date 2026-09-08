@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Filter, Search, ShieldCheck, UserCog, UserRoundCheck, UserRoundX } from "lucide-react";
+import axios from "axios";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import type { UserRole } from "@/features/auth/types/user.types";
 import { useBlockUser, useUnblockUser, useUpdateUserRole, useUsers } from "@/features/users/hooks/use-users";
-import type { AdminUser } from "@/features/users/types/admin-user.types";
+import { AgentBlockDialog } from "@/features/users/components/agent-block-dialog";
+import type { ActiveTicketsConflictResponse, AdminUser, BlockUserParams } from "@/features/users/types/admin-user.types";
 import { ErrorState } from "@/shared/components/error-state";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
 
@@ -24,6 +26,7 @@ export function UsersPage() {
     const [role, setRole] = useState<UserRole | "">("");
     const [page, setPage] = useState(0);
     const [feedback, setFeedback] = useState<string | null>(null);
+    const [blockConflict, setBlockConflict] = useState<{ user: AdminUser; activeTicketCount: number } | null>(null);
     const usersQuery = useUsers({
         search: search.trim() || undefined,
         role: role || undefined,
@@ -58,7 +61,6 @@ export function UsersPage() {
     }
 
     function toggleBlocked(user: AdminUser) {
-        const action = user.active ? block : unblock;
         const label = user.active ? "bloquear" : "desbloquear";
         if (!window.confirm(`Deseja ${label} ${user.name}?`)) return;
 
@@ -66,13 +68,45 @@ export function UsersPage() {
         updateRole.reset();
         block.reset();
         unblock.reset();
-        action.mutate(user.id, {
-            onSuccess: () => setFeedback(`${user.name} foi ${user.active ? "bloqueado" : "desbloqueado"}.`),
+        if (!user.active) {
+            unblock.mutate(user.id, { onSuccess: () => setFeedback(`${user.name} foi desbloqueado.`) });
+            return;
+        }
+
+        block.mutate({ userId: user.id }, {
+            onSuccess: () => setFeedback(`${user.name} foi bloqueado.`),
+            onError: (error) => {
+                if (axios.isAxiosError<ActiveTicketsConflictResponse>(error)
+                    && error.response?.status === 409
+                    && typeof error.response.data.activeTicketCount === "number") {
+                    const activeTicketCount = error.response.data.activeTicketCount;
+                    block.reset();
+                    setBlockConflict({ user, activeTicketCount });
+                }
+            },
+        });
+    }
+
+    function confirmAgentBlock(params: BlockUserParams) {
+        if (!blockConflict) return;
+        block.mutate(params, {
+            onSuccess: () => {
+                setFeedback(`${blockConflict.user.name} teve os chamados redistribuídos e foi bloqueado.`);
+                setBlockConflict(null);
+            },
         });
     }
 
     return (
         <div className="space-y-7">
+            {blockConflict && <AgentBlockDialog
+                user={blockConflict.user}
+                activeTicketCount={blockConflict.activeTicketCount}
+                isPending={block.isPending}
+                error={block.error}
+                onClose={() => { block.reset(); setBlockConflict(null); }}
+                onConfirm={confirmAgentBlock}
+            />}
             <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#030607] sm:px-8">
                 <div className="absolute -right-12 -top-20 size-64 rounded-full border-[32px] border-white/5" />
                 <div className="relative">
