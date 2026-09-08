@@ -9,11 +9,11 @@ const statusMap: Record<
 > = {
     OPEN: {
         label: "Aberto",
-        className: "border border-primary/40 bg-[#dceff7] text-[#17455b] shadow-sm dark:border-[#69b5d8]/55 dark:bg-[#102832] dark:text-[#bfe9fa]",
+        className: "border border-sky-300 bg-sky-100 text-sky-900 shadow-sm dark:border-sky-700 dark:bg-sky-950/65 dark:text-sky-200",
     },
     IN_PROGRESS: {
         label: "Em andamento",
-        className: "border border-[#7f7bcc]/45 bg-[#e8e7fa] text-[#403c8a] dark:border-[#8581dc]/60 dark:bg-[#242052] dark:text-[#dedcff]",
+        className: "border border-sky-300 bg-sky-100 text-sky-900 dark:border-sky-700 dark:bg-sky-950/65 dark:text-sky-200",
     },
     WAITING_CLIENT: {
         label: "Aguardando cliente",
@@ -21,7 +21,7 @@ const statusMap: Record<
     },
     WAITING_AGENT: {
         label: "Aguardando suporte",
-        className: "border border-sky-300 bg-sky-100 text-sky-900 dark:border-sky-700 dark:bg-sky-950/65 dark:text-sky-200",
+        className: "border border-violet-300 bg-violet-100 text-violet-900 dark:border-violet-700 dark:bg-violet-950/65 dark:text-violet-200",
     },
     RESOLVED: {
         label: "Resolvido",

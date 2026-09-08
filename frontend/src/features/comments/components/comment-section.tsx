@@ -96,7 +96,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                             return (
                                 <div
                                     key={comment.id}
-                                    className={`rounded-xl border p-4 shadow-[0_8px_24px_-22px_#030607] ${comment.isInternal
+                                    className={`rounded-xl border p-4 shadow-[0_8px_24px_-22px_#0d121c] ${comment.isInternal
                                         ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/45"
                                         : isSupport
                                             ? "border-primary/30 border-l-[3px] border-l-primary bg-primary/8"

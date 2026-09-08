@@ -26,7 +26,7 @@ export function TicketCard({ ticket }: TicketCardProps) {
     const isClientWaiting = user?.role === "CLIENT" && ticket.status === "WAITING_CLIENT";
 
     return (
-        <Card className="transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_22px_55px_-28px_#4794b880]">
+        <Card className="transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_22px_55px_-28px_#256d8580]">
             <CardHeader>
                 <div className="mb-2 flex items-center justify-between">
                     <div className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary-strong"><TicketIcon className="size-4" /></div>

@@ -94,14 +94,14 @@ export function AgentDashboardPage() {
     const cards = [
         { label: "Meus chamados ativos", value: dashboard.active, href: "/queues?queue=MY_TICKETS", icon: ListChecks, tone: "bg-primary/15 text-primary-strong" },
         { label: "Aguardando cliente", value: dashboard.waitingClient, href: "/queues?queue=WAITING_CLIENT", icon: Clock3, tone: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-200" },
-        { label: "Aguardando minha resposta", value: dashboard.waitingAgent, href: "/queues?queue=WAITING_AGENT", icon: MessageCircleMore, tone: "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-200" },
+        { label: "Aguardando minha resposta", value: dashboard.waitingAgent, href: "/queues?queue=WAITING_AGENT", icon: MessageCircleMore, tone: "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-200" },
         { label: "Resolvidos aguardando confirmação", value: dashboard.resolvedAwaitingConfirmation, href: "/queues?queue=RESOLVED", icon: BadgeCheck, tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200" },
         { label: "Chamados disponíveis", value: dashboard.available, href: "/queues?queue=AVAILABLE", icon: Inbox, tone: "bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-200" },
     ];
 
     return (
         <div className="space-y-8">
-            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#030607] sm:px-8">
+            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4657a9] via-[#6366c7] to-[#256d85] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#0d121c] sm:px-8">
                 <div className="absolute -right-10 -top-16 size-56 rounded-full border-[30px] border-white/5" />
                 <div className="relative">
                     <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75"><Headphones className="size-4" /> Seu espaço de trabalho</div>
@@ -117,7 +117,7 @@ export function AgentDashboardPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                     {cards.map(({ label, value, href, icon: Icon, tone }) => (
-                        <Link key={label} to={href} className="group rounded-2xl border border-border bg-card/90 p-5 shadow-[0_16px_40px_-30px_#4794b8] transition hover:-translate-y-0.5 hover:border-primary/45">
+                        <Link key={label} to={href} className="group rounded-2xl border border-border bg-card/90 p-5 shadow-[0_16px_40px_-30px_#256d85] transition hover:-translate-y-0.5 hover:border-primary/45">
                             <div className={`flex size-10 items-center justify-center rounded-xl ${tone}`}><Icon className="size-5" /></div>
                             <p className="mt-4 text-3xl font-bold tracking-tight">{value}</p>
                             <p className="mt-1 min-h-10 text-sm font-medium leading-5 text-muted-foreground">{label}</p>
