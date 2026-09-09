@@ -50,7 +50,7 @@ export function AgentBlockDialog({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onMouseDown={(event) => {
             if (event.target === event.currentTarget && !isPending) onClose();
         }}>
-            <section role="dialog" aria-modal="true" aria-labelledby="agent-block-title" className="w-full max-w-xl rounded-3xl border border-border bg-card p-6 shadow-2xl sm:p-7">
+            <section role="dialog" aria-modal="true" aria-labelledby="agent-block-title" className="w-full max-w-xl rounded-3xl border border-border bg-surface-elevated p-6 shadow-2xl sm:p-7">
                 <div className="flex items-start justify-between gap-4">
                     <div className="flex gap-3">
                         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><TriangleAlert className="size-5" /></span>

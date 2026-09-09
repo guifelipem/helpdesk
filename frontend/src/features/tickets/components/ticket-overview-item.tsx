@@ -25,7 +25,7 @@ function getActionLabel(ticket: Ticket) {
 
 export function TicketOverviewItem({ ticket, needsAttention = false }: TicketOverviewItemProps) {
     return (
-        <article className={`group rounded-2xl border bg-card/90 p-4 shadow-[0_16px_42px_-34px_#4794b8] transition hover:-translate-y-0.5 hover:shadow-[0_20px_46px_-30px_#4794b870] ${needsAttention ? "border-amber-300/80 dark:border-amber-700/70" : "border-border"}`}>
+        <article className={`group rounded-2xl border bg-card/90 p-4 shadow-[0_16px_42px_-34px_#256d85] transition hover:-translate-y-0.5 hover:shadow-[0_20px_46px_-30px_#256d8570] ${needsAttention ? "border-amber-300/80 dark:border-amber-700/70" : "border-border"}`}>
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                     <p className="text-xs font-bold tracking-[0.12em] text-muted-foreground">CHAMADO #{ticket.id}</p>

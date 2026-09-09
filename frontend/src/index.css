@@ -20,6 +20,7 @@
   --color-ring: var(--ring);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-surface-elevated: var(--surface-elevated);
 
   --radius-md: var(--radius);
 }
@@ -29,48 +30,50 @@
     color-scheme: light;
     --radius: 0.875rem;
 
-    --text: #060c0f;
-    --background: #f8fbfc;
-    --primary: #4794b8;
-    --primary-strong: #245b73;
-    --secondary: #9da4d8;
-    --accent: #7f7bcc;
+    --text: #172033;
+    --background: #f6f8fb;
+    --primary: #256d85;
+    --primary-strong: #1b5266;
+    --secondary: #4657a9;
+    --accent: #6366c7;
 
     --foreground: var(--text);
-    --primary-foreground: #030607;
-    --secondary-foreground: #060c0f;
-    --accent-foreground: #060c0f;
-    --muted: #eaf1f4;
-    --muted-foreground: #52636b;
+    --primary-foreground: #ffffff;
+    --secondary-foreground: #ffffff;
+    --accent-foreground: #ffffff;
+    --muted: #edf2f7;
+    --muted-foreground: #667085;
     --destructive: #c93656;
-    --border: #d4e0e5;
-    --input: #c8d7de;
+    --border: #dce3ec;
+    --input: #dce3ec;
     --ring: var(--primary);
     --card: #ffffff;
     --card-foreground: var(--text);
+    --surface-elevated: #ffffff;
   }
 
   .dark {
     color-scheme: dark;
-    --text: #f0f6f9;
-    --background: #030607;
-    --primary: #4794b8;
-    --primary-strong: #8fd0ef;
-    --secondary: #272e62;
-    --accent: #373384;
+    --text: #f1f5f9;
+    --background: #0d121c;
+    --primary: #55a9c4;
+    --primary-strong: #78c4db;
+    --secondary: #7887dd;
+    --accent: #9298eb;
 
     --foreground: var(--text);
-    --primary-foreground: #030607;
-    --secondary-foreground: #f0f6f9;
-    --accent-foreground: #f0f6f9;
-    --muted: #111b20;
-    --muted-foreground: #9aabb3;
+    --primary-foreground: #0d121c;
+    --secondary-foreground: #0d121c;
+    --accent-foreground: #0d121c;
+    --muted: #202a38;
+    --muted-foreground: #9daabc;
     --destructive: #f16b86;
-    --border: #24343c;
-    --input: #30434c;
-    --ring: #69b5d8;
-    --card: #0a1115;
+    --border: #2a3647;
+    --input: #2a3647;
+    --ring: var(--primary);
+    --card: #151c28;
     --card-foreground: var(--text);
+    --surface-elevated: #1b2432;
   }
 }
 
@@ -113,7 +116,7 @@ select {
 
 .auth-background {
   background:
-    radial-gradient(circle at 12% 16%, #4794b855 0, transparent 24rem),
-    radial-gradient(circle at 90% 84%, #7f7bcc55 0, transparent 28rem),
-    linear-gradient(135deg, #030607 0%, #272e62 52%, #373384 100%);
+    radial-gradient(circle at 12% 16%, #55a9c455 0, transparent 24rem),
+    radial-gradient(circle at 90% 84%, #9298eb55 0, transparent 28rem),
+    linear-gradient(135deg, #0d121c 0%, #256d85 52%, #4657a9 100%);
 }

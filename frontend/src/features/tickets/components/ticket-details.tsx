@@ -49,7 +49,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 <ArrowLeft /> Voltar
             </Button>
 
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] text-white ring-0">
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[#4657a9] via-[#6366c7] to-[#256d85] text-white ring-0">
                 <div className="absolute -right-16 -top-20 size-64 rounded-full border-[34px] border-white/5" />
                 <CardHeader className="relative">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

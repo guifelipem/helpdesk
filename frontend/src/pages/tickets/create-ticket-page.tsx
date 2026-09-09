@@ -32,7 +32,7 @@ export function CreateTicketPage() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-3xl bg-gradient-to-r from-[#272e62] to-[#373384] px-6 py-7 text-white shadow-[0_20px_50px_-30px_#030607]">
+            <div className="rounded-3xl bg-gradient-to-r from-[#4657a9] to-[#256d85] px-6 py-7 text-white shadow-[0_20px_50px_-30px_#0d121c]">
                 <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-white/10 text-white/80"><PlusCircle className="size-5" /></div>
                 <h1 className="text-3xl font-bold tracking-tight">
                     Novo chamado

@@ -75,7 +75,7 @@ export function ClientHomePage() {
 
     return (
         <div className="space-y-8">
-            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#030607] sm:px-8 sm:py-10">
+            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4657a9] via-[#6366c7] to-[#256d85] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#0d121c] sm:px-8 sm:py-10">
                 <div className="absolute -right-12 -top-20 size-64 rounded-full border-[32px] border-white/5" />
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -88,7 +88,7 @@ export function ClientHomePage() {
                         </p>
                     </div>
 
-                    <Button asChild size="lg" className="bg-primary text-primary-foreground shadow-black/30 hover:bg-[#64acd0]">
+                    <Button asChild size="lg" className="bg-primary text-primary-foreground shadow-black/30 hover:bg-primary-strong">
                         <Link to="/tickets/new"><Plus /> Abrir novo chamado</Link>
                     </Button>
                 </div>

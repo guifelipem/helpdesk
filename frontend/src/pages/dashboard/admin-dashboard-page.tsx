@@ -109,16 +109,16 @@ export function AdminDashboardPage() {
     const cards = [
         { label: "Abertos", value: dashboard.totalActive, href: "/tickets?active=true", icon: CircleDot, tone: "text-primary-strong bg-primary/15" },
         { label: "Sem responsável", value: dashboard.unassigned, href: "/tickets?unassigned=true&active=true", icon: Inbox, tone: "text-rose-700 bg-rose-100 dark:text-rose-200 dark:bg-rose-950/60" },
-        { label: "Em andamento", value: dashboard.inProgress, href: "/tickets?status=IN_PROGRESS", icon: Clock3, tone: "text-violet-700 bg-violet-100 dark:text-violet-200 dark:bg-violet-950/60" },
+        { label: "Em andamento", value: dashboard.inProgress, href: "/tickets?status=IN_PROGRESS", icon: Clock3, tone: "text-sky-700 bg-sky-100 dark:text-sky-200 dark:bg-sky-950/60" },
         { label: "Aguardando cliente", value: dashboard.waitingClient, href: "/tickets?status=WAITING_CLIENT", icon: MessageCircleMore, tone: "text-amber-700 bg-amber-100 dark:text-amber-200 dark:bg-amber-950/60" },
-        { label: "Aguardando agente", value: dashboard.waitingAgent, href: "/tickets?status=WAITING_AGENT", icon: UserRoundCheck, tone: "text-sky-700 bg-sky-100 dark:text-sky-200 dark:bg-sky-950/60" },
+        { label: "Aguardando agente", value: dashboard.waitingAgent, href: "/tickets?status=WAITING_AGENT", icon: UserRoundCheck, tone: "text-violet-700 bg-violet-100 dark:text-violet-200 dark:bg-violet-950/60" },
         { label: "Resolvidos", value: dashboard.resolved, href: "/tickets?status=RESOLVED", icon: CheckCircle2, tone: "text-emerald-700 bg-emerald-100 dark:text-emerald-200 dark:bg-emerald-950/60" },
     ];
     const maxLoad = Math.max(...dashboard.activeByAgent.map((agent) => agent.activeTickets), 1);
 
     return (
         <div className="space-y-8">
-            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#030607] sm:px-8">
+            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4657a9] via-[#6366c7] to-[#256d85] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#0d121c] sm:px-8">
                 <div className="absolute -right-10 -top-16 size-56 rounded-full border-[30px] border-white/5" />
                 <div className="relative">
                     <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75"><LayoutDashboard className="size-4" /> Visão operacional</div>
@@ -134,7 +134,7 @@ export function AdminDashboardPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {cards.map(({ label, value, href, icon: Icon, tone }) => (
-                        <Link key={label} to={href} className="group rounded-2xl border border-border bg-card/90 p-5 shadow-[0_16px_40px_-30px_#4794b8] transition hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_20px_45px_-28px_#4794b8]">
+                        <Link key={label} to={href} className="group rounded-2xl border border-border bg-card/90 p-5 shadow-[0_16px_40px_-30px_#256d85] transition hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_20px_45px_-28px_#256d85]">
                             <div className="flex items-start justify-between">
                                 <div><p className="text-sm font-medium text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold tracking-tight">{value}</p></div>
                                 <div className={`flex size-10 items-center justify-center rounded-xl ${tone}`}><Icon className="size-5" /></div>
@@ -152,7 +152,7 @@ export function AdminDashboardPage() {
                         <div className="space-y-2">
                             {dashboard.activeByAgent.map((agent) => (
                                 <Link key={agent.agentId} to={`/tickets?agentId=${agent.agentId}&active=true`} className="group flex items-center gap-4 rounded-xl p-3 transition hover:bg-muted/70">
-                                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-secondary to-primary text-sm font-bold text-[#060c0f]">{agent.agentName.charAt(0).toUpperCase()}</div>
+                                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-secondary to-primary text-sm font-bold text-secondary-foreground">{agent.agentName.charAt(0).toUpperCase()}</div>
                                     <div className="min-w-0 flex-1"><div className="mb-2 flex justify-between gap-3"><span className="truncate text-sm font-semibold">{agent.agentName}</span><span className="text-sm font-bold">{agent.activeTickets}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-accent to-primary" style={{ width: `${(agent.activeTickets / maxLoad) * 100}%` }} /></div></div>
                                     <ArrowRight className="size-4 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary-strong" />
                                 </Link>

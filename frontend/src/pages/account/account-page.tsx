@@ -71,7 +71,7 @@ export function AccountPage() {
 
     return (
         <div className="space-y-7">
-            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#030607] sm:px-8">
+            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4657a9] via-[#6366c7] to-[#256d85] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#0d121c] sm:px-8">
                 <div className="absolute -right-12 -top-20 size-64 rounded-full border-[32px] border-white/5" />
                 <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
                     <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20 backdrop-blur-sm">

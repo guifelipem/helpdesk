@@ -44,7 +44,7 @@ export function RegisterPage() {
       <div className="absolute bottom-[8%] right-[7%] size-80 rounded-full border border-white/8" />
       <Card className="relative w-full max-w-md border-white/20 bg-card/96 px-2 py-2 shadow-[0_30px_80px_-25px_#00000090] backdrop-blur-xl">
         <CardHeader className="pb-2 text-center">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-[#030607] shadow-lg shadow-primary/25 dark:text-white"><Headphones className="size-6" /></div>
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/25"><Headphones className="size-6" /></div>
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary-strong">Helpdesk</p>
           <CardTitle className="mt-2 text-2xl font-bold tracking-tight">Crie sua conta</CardTitle>
           <CardDescription>Cadastre-se para abrir e acompanhar seus chamados.</CardDescription>

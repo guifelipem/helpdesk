@@ -110,7 +110,7 @@ export function TicketsPage() {
 
     return (
         <div className="space-y-7">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#272e62] via-[#373384] to-[#4794b8] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#030607] sm:px-8">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4657a9] via-[#6366c7] to-[#256d85] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#0d121c] sm:px-8">
                 <div className="absolute -right-12 -top-20 size-64 rounded-full border-[32px] border-white/5" />
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -127,14 +127,14 @@ export function TicketsPage() {
                 </div>
 
                 {isClient && (
-                    <Button asChild className="bg-primary text-primary-foreground shadow-black/30 hover:bg-[#64acd0]">
+                    <Button asChild className="bg-primary text-primary-foreground shadow-black/30 hover:bg-primary-strong">
                         <Link to="/tickets/new"><Plus /> Novo chamado</Link>
                     </Button>
                 )}
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-[0_15px_40px_-30px_#4794b866] backdrop-blur-sm">
+            <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-[0_15px_40px_-30px_#256d8566] backdrop-blur-sm">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><Filter className="size-4 text-primary-strong" /> Filtros</div>
                   <div className={`grid gap-3 md:grid-cols-2 ${isAdmin ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
                     <div className="relative">
