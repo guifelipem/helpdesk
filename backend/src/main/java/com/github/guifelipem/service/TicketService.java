@@ -55,6 +55,7 @@ public class TicketService {
     private final TicketHistoryRepository ticketHistoryRepository;
     private final UserRepository userRepository;
 
+    @Transactional
     public TicketResponse create(CreateTicketRequest request) {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
