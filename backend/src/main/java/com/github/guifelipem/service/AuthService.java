@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -24,14 +25,15 @@ public class AuthService {
     private final JwtService jwtService;
 
     public RegisterResponse register(RegisterRequest request) {
+        String email = normalizeEmail(request.email());
 
-        if (userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new EmailAlreadyExistsException("Email já cadastrado");
         }
 
         User user = User.builder()
-                .name(request.name())
-                .email(request.email())
+                .name(request.name().trim())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(UserRole.CLIENT)
                 .active(true)
@@ -49,8 +51,9 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
+        String email = normalizeEmail(request.email());
 
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new InvalidCredentialsException("Email ou senha inválidos"));
 
         boolean passwordMatches = passwordEncoder.matches(
@@ -81,5 +84,9 @@ public class AuthService {
                 user.getEmail(),
                 user.getRole()
         );
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }
