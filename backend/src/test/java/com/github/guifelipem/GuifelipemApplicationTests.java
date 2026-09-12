@@ -10,6 +10,7 @@ import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
+import com.github.guifelipem.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +33,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -59,6 +62,9 @@ class GuifelipemApplicationTests {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+
+	@Autowired
+	private JwtService jwtService;
 
 	@Test
 	void contextLoads() {
@@ -89,6 +95,54 @@ class GuifelipemApplicationTests {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.status").value(400))
 				.andExpect(header().doesNotExist("Set-Cookie"));
+	}
+
+	@Test
+	void shouldForbidClientFromAgentEndpoint() throws Exception {
+		User client = saveClient("authorization-client@example.com", LocalDateTime.now());
+
+		mockMvc.perform(get("/api/tickets/queues/summary")
+					.header("Authorization", bearerToken(client)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403));
+	}
+
+	@Test
+	void shouldForbidAgentFromAdminEndpoint() throws Exception {
+		User agent = saveAgent("authorization-agent@example.com", LocalDateTime.now());
+
+		mockMvc.perform(get("/api/users")
+					.header("Authorization", bearerToken(agent)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403));
+	}
+
+	@Test
+	void shouldRejectProtectedRequestWithoutToken() throws Exception {
+		mockMvc.perform(get("/api/auth/me"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401));
+	}
+
+	@Test
+	void shouldForbidAdminFromAgentOperationalAction() throws Exception {
+		User admin = userRepository.findByEmail("admin@helpdesk.local").orElseThrow();
+
+		mockMvc.perform(patch("/api/tickets/999/assign/me")
+					.header("Authorization", bearerToken(admin)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403));
+	}
+
+	@Test
+	void shouldReturnCurrentUserForAuthenticatedRequest() throws Exception {
+		User admin = userRepository.findByEmail("admin@helpdesk.local").orElseThrow();
+
+		mockMvc.perform(get("/api/auth/me")
+					.header("Authorization", bearerToken(admin)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.email").value("admin@helpdesk.local"))
+				.andExpect(jsonPath("$.role").value("ADMIN"));
 	}
 
 	@Test
@@ -264,6 +318,10 @@ class GuifelipemApplicationTests {
 				.role(role)
 				.createdAt(createdAt)
 				.build());
+	}
+
+	private String bearerToken(User user) {
+		return "Bearer " + jwtService.generateToken(user.getEmail());
 	}
 
 	private Ticket saveTicket(User client, String title, TicketStatus status, LocalDateTime updatedAt) {
