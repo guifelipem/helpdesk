@@ -10,14 +10,18 @@ import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
+import com.github.guifelipem.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -29,9 +33,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
 class GuifelipemApplicationTests {
@@ -46,8 +57,92 @@ class GuifelipemApplicationTests {
 	@Autowired
 	private UserRepository userRepository;
 
+	@Autowired
+	private MockMvc mockMvc;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
+	@Autowired
+	private JwtService jwtService;
+
 	@Test
 	void contextLoads() {
+	}
+
+	@Test
+	void shouldCreateDemoAdministratorWithBcryptPasswordAndAllowLogin() throws Exception {
+		User admin = userRepository.findByEmail("admin@helpdesk.local").orElseThrow();
+
+		assertEquals("Administrador", admin.getName());
+		assertEquals(UserRole.ADMIN, admin.getRole());
+		assertTrue(admin.isActive());
+		assertTrue(admin.getPasswordHash().startsWith("$2"));
+		assertTrue(passwordEncoder.matches("admin@123", admin.getPasswordHash()));
+
+		mockMvc.perform(post("/api/auth/login")
+					.contentType("application/json")
+					.content("{\"email\":\"admin@helpdesk.local\",\"password\":\"admin@123\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.token").isNotEmpty());
+	}
+
+	@Test
+	void shouldReturnBadRequestWithoutSessionForInvalidPublicRegistration() throws Exception {
+		mockMvc.perform(post("/api/auth/register")
+					.contentType("application/json")
+					.content("{}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(header().doesNotExist("Set-Cookie"));
+	}
+
+	@Test
+	void shouldForbidClientFromAgentEndpoint() throws Exception {
+		User client = saveClient("authorization-client@example.com", LocalDateTime.now());
+
+		mockMvc.perform(get("/api/tickets/queues/summary")
+					.header("Authorization", bearerToken(client)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403));
+	}
+
+	@Test
+	void shouldForbidAgentFromAdminEndpoint() throws Exception {
+		User agent = saveAgent("authorization-agent@example.com", LocalDateTime.now());
+
+		mockMvc.perform(get("/api/users")
+					.header("Authorization", bearerToken(agent)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403));
+	}
+
+	@Test
+	void shouldRejectProtectedRequestWithoutToken() throws Exception {
+		mockMvc.perform(get("/api/auth/me"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401));
+	}
+
+	@Test
+	void shouldForbidAdminFromAgentOperationalAction() throws Exception {
+		User admin = userRepository.findByEmail("admin@helpdesk.local").orElseThrow();
+
+		mockMvc.perform(patch("/api/tickets/999/assign/me")
+					.header("Authorization", bearerToken(admin)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403));
+	}
+
+	@Test
+	void shouldReturnCurrentUserForAuthenticatedRequest() throws Exception {
+		User admin = userRepository.findByEmail("admin@helpdesk.local").orElseThrow();
+
+		mockMvc.perform(get("/api/auth/me")
+					.header("Authorization", bearerToken(admin)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.email").value("admin@helpdesk.local"))
+				.andExpect(jsonPath("$.role").value("ADMIN"));
 	}
 
 	@Test
@@ -223,6 +318,10 @@ class GuifelipemApplicationTests {
 				.role(role)
 				.createdAt(createdAt)
 				.build());
+	}
+
+	private String bearerToken(User user) {
+		return "Bearer " + jwtService.generateToken(user.getEmail());
 	}
 
 	private Ticket saveTicket(User client, String title, TicketStatus status, LocalDateTime updatedAt) {

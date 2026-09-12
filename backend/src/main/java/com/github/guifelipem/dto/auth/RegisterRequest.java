@@ -10,15 +10,17 @@ public record RegisterRequest(
 
         @Schema(description = "Nome do cliente", example = "Maria Silva")
         @NotBlank
+        @Size(max = 255)
         String name,
 
         @Schema(description = "E-mail único da conta", example = "maria@example.com")
         @NotBlank
         @Email
+        @Size(max = 255)
         String email,
 
         @Schema(description = "Senha com no mínimo 6 caracteres", example = "senha123", format = "password", minLength = 6)
         @NotBlank
-        @Size(min = 6)
+        @Size(min = 6, max = 72)
         String password
 ) {}

@@ -16,6 +16,7 @@ import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.TicketQueue;
 import com.github.guifelipem.exception.ErrorResponse;
 import com.github.guifelipem.service.TicketService;
+import com.github.guifelipem.web.PageRequestFactory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,9 +26,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -43,7 +41,12 @@ import java.time.LocalDateTime;
 @Tag(name = "Chamados", description = "Abertura, consulta, atribuição e evolução de chamados")
 public class TicketController {
 
+    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of(
+            "id", "title", "status", "priority", "createdAt", "updatedAt"
+    );
+
     private final TicketService ticketService;
+    private final PageRequestFactory pageRequestFactory;
 
     @PreAuthorize("hasRole('CLIENT')")
     @PostMapping
@@ -79,7 +82,7 @@ public class TicketController {
             @Parameter(description = "Campo e direção separados por vírgula") @RequestParam(defaultValue = "updatedAt,desc") String sort
     ) {
         return ResponseEntity.ok(ticketService.findMyTickets(
-                status, priority, search, createPageable(page, size, sort)
+                status, priority, search, pageRequestFactory.create(page, size, sort, ALLOWED_SORT_PROPERTIES)
         ));
     }
 
@@ -216,7 +219,8 @@ public class TicketController {
             ) {
 
         return ResponseEntity.ok(ticketService.findAll(
-                status, priority, agentId, active, unassigned, search, createPageable(page, size, sort)
+                status, priority, agentId, active, unassigned, search,
+                pageRequestFactory.create(page, size, sort, ALLOWED_SORT_PROPERTIES)
         ));
     }
 
@@ -237,7 +241,7 @@ public class TicketController {
             @Parameter(description = "Índice da página, começando em zero", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Quantidade de itens por página", example = "10") @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(ticketService.findQueue(queue, PageRequest.of(page, size)));
+        return ResponseEntity.ok(ticketService.findQueue(queue, pageRequestFactory.createUnsorted(page, size)));
     }
 
     @PreAuthorize("hasRole('AGENT')")
@@ -303,10 +307,4 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.summarizeAdminPerformance(from, to));
     }
 
-    private Pageable createPageable(int page, int size, String sort) {
-        String[] sortParams = sort.split(",");
-        return PageRequest.of(page, size,
-                Sort.by(Sort.Direction.fromString(sortParams[1]), sortParams[0])
-        );
-    }
 }

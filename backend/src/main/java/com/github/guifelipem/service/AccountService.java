@@ -15,6 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class AccountService {
@@ -32,7 +34,7 @@ public class AccountService {
     @Transactional
     public UpdateAccountResponse updateAccount(UpdateAccountRequest request) {
         User user = authenticatedUserProvider.getAuthenticatedUser();
-        String email = request.email().trim();
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
 
         if (!user.getEmail().equalsIgnoreCase(email)
                 && userRepository.existsByEmailIgnoreCase(email)) {

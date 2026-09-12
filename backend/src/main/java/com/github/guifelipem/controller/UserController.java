@@ -7,6 +7,7 @@ import com.github.guifelipem.dto.user.UserResponse;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ErrorResponse;
 import com.github.guifelipem.service.UserService;
+import com.github.guifelipem.web.PageRequestFactory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,9 +18,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/users")
@@ -27,7 +29,12 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Usuários", description = "Consulta e administração de usuários")
 public class UserController {
 
+        private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of(
+                "id", "name", "email", "role", "createdAt", "active"
+        );
+
         private final UserService userService;
+        private final PageRequestFactory pageRequestFactory;
 
         @GetMapping
         @PreAuthorize("hasRole('ADMIN')")
@@ -41,10 +48,12 @@ public class UserController {
         public Page<UserResponse> findAll(
                 @Parameter(description = "Filtra pelo perfil") @RequestParam(required = false) UserRole role,
                 @Parameter(description = "Busca parcial, sem diferenciar maiúsculas, no nome ou e-mail", example = "maria") @RequestParam(required = false) String search,
-                @Parameter(description = "Paginação e ordenação. Use page (base zero), size e sort no formato campo,direção.")
-                Pageable pageable
+                @Parameter(description = "Índice da página, começando em zero") @RequestParam(defaultValue = "0") int page,
+                @Parameter(description = "Quantidade de itens por página, entre 1 e 100") @RequestParam(defaultValue = "10") int size,
+                @Parameter(description = "Campo e direção separados por vírgula") @RequestParam(defaultValue = "name,asc") String sort
         ) {
-                return userService.findAll(role, search, pageable);
+                return userService.findAll(role, search,
+                        pageRequestFactory.create(page, size, sort, ALLOWED_SORT_PROPERTIES));
         }
 
         @PatchMapping("/{id}/role")
