@@ -4,8 +4,10 @@ import com.github.guifelipem.dto.user.UpdateUserRoleRequest;
 import com.github.guifelipem.dto.user.BlockUserRequest;
 import com.github.guifelipem.dto.user.UserResponse;
 import com.github.guifelipem.entity.Ticket;
+import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.AgentBlockAction;
+import com.github.guifelipem.enums.TicketHistoryAction;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
@@ -19,6 +21,7 @@ import com.github.guifelipem.security.AuthenticatedUserProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -32,6 +35,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -209,6 +213,30 @@ class UserServiceTest {
         verify(ticketHistoryRepository).save(org.mockito.ArgumentMatchers.argThat(history ->
                 history.getDetails().contains("devido ao bloqueio do agente")
         ));
+    }
+
+    @Test
+    void shouldRegisterStatusChangeAndQueueReturnWhenBlockingAgent() {
+        User agent = buildUser(1L, UserRole.AGENT);
+        User admin = buildUser(3L, UserRole.ADMIN);
+        Ticket inProgress = buildTicket(10L, agent, TicketStatus.IN_PROGRESS);
+        when(userRepository.findByIdForUpdate(agent.getId())).thenReturn(Optional.of(agent));
+        when(ticketRepository.findActiveAssignedToForUpdate(agent, TicketStatus.CLOSED))
+                .thenReturn(List.of(inProgress));
+        when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+        when(ticketRepository.save(inProgress)).thenReturn(inProgress);
+        when(userRepository.save(agent)).thenReturn(agent);
+
+        userService.block(agent.getId(), new BlockUserRequest(AgentBlockAction.RETURN_TO_QUEUE, null));
+
+        assertEquals(TicketStatus.OPEN, inProgress.getStatus());
+        assertEquals(null, inProgress.getAssignedTo());
+        ArgumentCaptor<TicketHistory> captor = ArgumentCaptor.forClass(TicketHistory.class);
+        verify(ticketHistoryRepository, times(2)).save(captor.capture());
+        assertEquals(TicketHistoryAction.STATUS_CHANGED, captor.getAllValues().get(0).getAction());
+        assertEquals(TicketStatus.IN_PROGRESS.name(), captor.getAllValues().get(0).getOldValue());
+        assertEquals(TicketStatus.OPEN.name(), captor.getAllValues().get(0).getNewValue());
+        assertEquals(TicketHistoryAction.TICKET_RETURNED_TO_QUEUE, captor.getAllValues().get(1).getAction());
     }
 
     private Ticket buildTicket(Long id, User assignedTo, TicketStatus status) {

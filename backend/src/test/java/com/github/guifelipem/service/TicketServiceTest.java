@@ -1335,6 +1335,29 @@ class TicketServiceTest {
         }
 
         @Test
+        void shouldTransferResolvedTicketAndPreserveStatus() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User previous = User.builder().id(2L).name("Anterior").role(UserRole.AGENT).build();
+                User target = User.builder().id(3L).name("Novo").role(UserRole.AGENT).active(true).build();
+                User client = User.builder().id(4L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(10L).createdBy(client).assignedTo(previous)
+                        .status(TicketStatus.RESOLVED).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.transfer(10L, new TransferTicketRequest(target.getId()));
+
+                assertEquals(target.getId(), response.assignedTo().id());
+                assertEquals(TicketStatus.RESOLVED, response.status());
+                ArgumentCaptor<TicketHistory> captor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(captor.capture());
+                assertEquals(TicketHistoryAction.TICKET_TRANSFERRED, captor.getValue().getAction());
+        }
+
+        @Test
         void shouldRejectTransferToBlockedAgent() {
                 User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
                 User previous = User.builder().id(2L).name("Anterior").role(UserRole.AGENT).build();

@@ -123,12 +123,24 @@ public class UserService {
                 LocalDateTime changedAt = LocalDateTime.now();
                 for (Ticket ticket : tickets) {
                         User destination = targetAgent;
+                        TicketStatus previousStatus = ticket.getStatus();
                         ticket.setAssignedTo(destination);
                         if (request.action() == AgentBlockAction.RETURN_TO_QUEUE) {
                                 ticket.setStatus(TicketStatus.OPEN);
                         }
                         ticket.setUpdatedAt(changedAt);
                         Ticket savedTicket = ticketRepository.save(ticket);
+
+                        if (previousStatus != savedTicket.getStatus()) {
+                                ticketHistoryRepository.save(TicketHistory.builder()
+                                        .ticket(savedTicket)
+                                        .action(TicketHistoryAction.STATUS_CHANGED)
+                                        .oldValue(previousStatus.name())
+                                        .newValue(savedTicket.getStatus().name())
+                                        .performedBy(admin)
+                                        .createdAt(changedAt)
+                                        .build());
+                        }
 
                         ticketHistoryRepository.save(TicketHistory.builder()
                                 .ticket(savedTicket)
