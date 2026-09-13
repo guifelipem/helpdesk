@@ -12,13 +12,15 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 import { Label } from "@/components/ui/label";
 import type { TicketStatus } from "@/features/tickets/types/ticket.types";
 import { MessageSquareText, Send } from "lucide-react";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 type CommentSectionProps = {
     ticketId: number;
     ticketStatus: TicketStatus;
+    assignedToId: number | null;
 };
 
-export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) {
+export function CommentSection({ ticketId, ticketStatus, assignedToId }: CommentSectionProps) {
     const [message, setMessage] = useState("");
 
     const user = useAuthStore((state) => state.user);
@@ -26,9 +28,11 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
     const [isInternal, setIsInternal] = useState(false);
 
     const isAdmin = user?.role === "ADMIN";
-    const canCreateInternalComment = user?.role === "AGENT";
+    const isAgent = user?.role === "AGENT";
+    const isResponsibleAgent = isAgent && user.id === assignedToId;
+    const canCreateInternalComment = isResponsibleAgent;
 
-    const isTicketReadOnly = isAdmin || ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
+    const isTicketReadOnly = isAdmin || (isAgent && !isResponsibleAgent) || ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
 
     const { data: comments = [], isLoading, isError, error, refetch, isFetching, } = useComments(ticketId);
     const createCommentMutation = useCreateComment(ticketId);
@@ -130,7 +134,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                                         </span>
                                     </div>
 
-                                    <p className="mt-3 pl-10 text-sm leading-6 text-foreground/85">
+                                    <p className="mt-3 break-words pl-10 text-sm leading-6 text-foreground/85">
                                         {comment.message}
                                     </p>
                                 </div>
@@ -145,7 +149,11 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                             ? "Modo de supervisão: os comentários públicos e internos estão disponíveis somente para leitura."
                             : ticketStatus === "RESOLVED"
                             ? "Este chamado aguarda a confirmação da resolução e não aceita novos comentários. Confirme ou rejeite a resolução acima."
-                            : "Este chamado foi encerrado e não aceita novos comentários."}
+                            : ticketStatus === "CLOSED"
+                            ? "Este chamado foi encerrado e não aceita novos comentários."
+                            : isAgent && assignedToId === null
+                            ? "Assuma este chamado antes de adicionar comentários."
+                            : "Somente o agente responsável pode adicionar comentários neste chamado."}
                     </p>
                 ) : (
                     <div className="space-y-3 border-t border-border pt-5">
@@ -156,6 +164,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                             placeholder="Escreva uma resposta..."
                             value={message}
                             onChange={(event) => setMessage(event.target.value)}
+                            maxLength={VALIDATION_LIMITS.comment}
                             className="min-h-20 max-h-40 resize-y bg-muted/45"
                             aria-describedby={createCommentMutation.error ? "comment-error" : undefined}
                         />

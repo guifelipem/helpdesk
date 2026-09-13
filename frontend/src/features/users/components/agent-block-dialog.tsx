@@ -50,13 +50,13 @@ export function AgentBlockDialog({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onMouseDown={(event) => {
             if (event.target === event.currentTarget && !isPending) onClose();
         }}>
-            <section role="dialog" aria-modal="true" aria-labelledby="agent-block-title" className="w-full max-w-xl rounded-3xl border border-border bg-surface-elevated p-6 shadow-2xl sm:p-7">
+            <section role="dialog" aria-modal="true" aria-labelledby="agent-block-title" aria-describedby="agent-block-description" className="w-full max-w-xl rounded-3xl border border-border bg-surface-elevated p-6 shadow-2xl sm:p-7">
                 <div className="flex items-start justify-between gap-4">
                     <div className="flex gap-3">
                         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><TriangleAlert className="size-5" /></span>
                         <div>
                             <h2 id="agent-block-title" className="text-xl font-bold">Redistribuir chamados antes do bloqueio</h2>
-                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                            <p id="agent-block-description" className="mt-2 text-sm leading-6 text-muted-foreground">
                                 <strong className="text-foreground">{user.name}</strong> possui {activeTicketCount} chamado{activeTicketCount === 1 ? "" : "s"} não fechado{activeTicketCount === 1 ? "" : "s"}. Escolha o destino antes de bloquear o acesso.
                             </p>
                         </div>
@@ -65,12 +65,12 @@ export function AgentBlockDialog({
                 </div>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <button type="button" onClick={() => setAction("TRANSFER")} disabled={isPending} className={`rounded-2xl border p-4 text-left transition ${action === "TRANSFER" ? "border-primary bg-secondary/70 ring-2 ring-primary/20" : "border-border hover:bg-muted/60"}`}>
+                    <button type="button" aria-pressed={action === "TRANSFER"} onClick={() => setAction("TRANSFER")} disabled={isPending} className={`rounded-2xl border p-4 text-left transition ${action === "TRANSFER" ? "border-primary bg-secondary/70 ring-2 ring-primary/20" : "border-border hover:bg-muted/60"}`}>
                         <ArrowRightLeft className="mb-3 size-5 text-primary-strong" />
                         <span className="block font-semibold">Transferir chamados</span>
                         <span className="mt-1 block text-xs leading-5 text-muted-foreground">Mantém o status atual, inclusive dos chamados resolvidos.</span>
                     </button>
-                    <button type="button" onClick={() => setAction("RETURN_TO_QUEUE")} disabled={isPending} className={`rounded-2xl border p-4 text-left transition ${action === "RETURN_TO_QUEUE" ? "border-primary bg-secondary/70 ring-2 ring-primary/20" : "border-border hover:bg-muted/60"}`}>
+                    <button type="button" aria-pressed={action === "RETURN_TO_QUEUE"} onClick={() => setAction("RETURN_TO_QUEUE")} disabled={isPending} className={`rounded-2xl border p-4 text-left transition ${action === "RETURN_TO_QUEUE" ? "border-primary bg-secondary/70 ring-2 ring-primary/20" : "border-border hover:bg-muted/60"}`}>
                         <RotateCcw className="mb-3 size-5 text-primary-strong" />
                         <span className="block font-semibold">Devolver à fila</span>
                         <span className="mt-1 block text-xs leading-5 text-muted-foreground">Remove o responsável e disponibiliza os chamados novamente.</span>

@@ -19,6 +19,7 @@ import {
 } from "@/features/account/schemas/account.schema";
 import { ErrorState } from "@/shared/components/error-state";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 const roleLabels: Record<UserRole, string> = {
     CLIENT: "Cliente",
@@ -103,7 +104,7 @@ export function AccountPage() {
                                     <Label htmlFor="account-name">Nome</Label>
                                     <div className="relative">
                                         <UserRound className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                                        <Input id="account-name" autoComplete="name" className="pl-10" aria-invalid={!!accountForm.formState.errors.name} {...accountForm.register("name")} />
+                                        <Input id="account-name" autoComplete="name" className="pl-10" maxLength={VALIDATION_LIMITS.userName} aria-invalid={!!accountForm.formState.errors.name} {...accountForm.register("name")} />
                                     </div>
                                     {accountForm.formState.errors.name && <p role="alert" className="text-sm text-destructive">{accountForm.formState.errors.name.message}</p>}
                                 </div>
@@ -112,7 +113,7 @@ export function AccountPage() {
                                     <Label htmlFor="account-email">E-mail</Label>
                                     <div className="relative">
                                         <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                                        <Input id="account-email" type="email" autoComplete="email" className="pl-10" aria-invalid={!!accountForm.formState.errors.email} {...accountForm.register("email")} />
+                                        <Input id="account-email" type="email" autoComplete="email" className="pl-10" maxLength={VALIDATION_LIMITS.email} aria-invalid={!!accountForm.formState.errors.email} {...accountForm.register("email")} />
                                     </div>
                                     {accountForm.formState.errors.email && <p role="alert" className="text-sm text-destructive">{accountForm.formState.errors.email.message}</p>}
                                 </div>
@@ -145,17 +146,17 @@ export function AccountPage() {
                             <form onSubmit={passwordForm.handleSubmit(submitPassword)} className="space-y-5">
                                 <div className="space-y-2">
                                     <Label htmlFor="current-password">Senha atual</Label>
-                                    <PasswordInput id="current-password" autoComplete="current-password" placeholder="Digite sua senha atual" aria-invalid={!!passwordForm.formState.errors.currentPassword} {...passwordForm.register("currentPassword")} />
+                                    <PasswordInput id="current-password" autoComplete="current-password" placeholder="Digite sua senha atual" maxLength={VALIDATION_LIMITS.password} aria-invalid={!!passwordForm.formState.errors.currentPassword} {...passwordForm.register("currentPassword")} />
                                     {passwordForm.formState.errors.currentPassword && <p role="alert" className="text-sm text-destructive">{passwordForm.formState.errors.currentPassword.message}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="new-password">Nova senha</Label>
-                                    <PasswordInput id="new-password" autoComplete="new-password" placeholder="Mínimo de 6 caracteres" aria-invalid={!!passwordForm.formState.errors.newPassword} {...passwordForm.register("newPassword")} />
+                                    <PasswordInput id="new-password" autoComplete="new-password" placeholder="Mínimo de 6 caracteres" maxLength={VALIDATION_LIMITS.password} aria-invalid={!!passwordForm.formState.errors.newPassword} {...passwordForm.register("newPassword")} />
                                     {passwordForm.formState.errors.newPassword && <p role="alert" className="text-sm text-destructive">{passwordForm.formState.errors.newPassword.message}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="confirm-new-password">Confirmar nova senha</Label>
-                                    <PasswordInput id="confirm-new-password" autoComplete="new-password" placeholder="Digite a nova senha novamente" aria-invalid={!!passwordForm.formState.errors.confirmPassword} {...passwordForm.register("confirmPassword")} />
+                                    <PasswordInput id="confirm-new-password" autoComplete="new-password" placeholder="Digite a nova senha novamente" maxLength={VALIDATION_LIMITS.password} aria-invalid={!!passwordForm.formState.errors.confirmPassword} {...passwordForm.register("confirmPassword")} />
                                     {passwordForm.formState.errors.confirmPassword && <p role="alert" className="text-sm text-destructive">{passwordForm.formState.errors.confirmPassword.message}</p>}
                                 </div>
 

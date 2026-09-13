@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { createComment, findComments } from "../api/comment.api";
 import { commentQueryKeys } from "../constants/comment-query-keys";
+import { ticketQueryKeys } from "@/features/tickets/constants/ticket-query-keys";
 import type { CreateCommentRequest } from "../types/create-comment-request";
 
 export function useComments(ticketId: number) {
@@ -22,6 +23,9 @@ export function useCreateComment(ticketId: number) {
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: commentQueryKeys.list(ticketId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: ticketQueryKeys.detail(ticketId),
             });
         },
     });

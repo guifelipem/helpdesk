@@ -10,12 +10,15 @@ import { useAssignTicket, useUpdateTicketStatus, useCloseTicket, useRejectTicket
 import type { Ticket, TicketStatus } from "../types/ticket.types";
 import { Undo2 } from "lucide-react";
 import { AdminTicketActions } from "./admin-ticket-actions";
+import { ConfirmationDialog } from "@/shared/components/confirmation-dialog";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 type TicketActionsProps = { ticket: Ticket; };
 
 export function TicketActions({ ticket }: TicketActionsProps) {
     const [isRejectingResolution, setIsRejectingResolution] = useState(false);
     const [rejectionReason, setRejectionReason] = useState("");
+    const [isConfirmingSendToAgent, setIsConfirmingSendToAgent] = useState(false);
 
     const user = useAuthStore((state) => state.user);
 
@@ -53,13 +56,12 @@ export function TicketActions({ ticket }: TicketActionsProps) {
     }
 
     function handleSendToAgent() {
-        const confirmed = window.confirm(
-            "Você confirma que já enviou as informações solicitadas? O chamado será devolvido para a fila do agente responsável."
-        );
+        setIsConfirmingSendToAgent(true);
+    }
 
-        if (confirmed) {
-            sendToAgent.mutate(ticket.id);
-        }
+    function confirmSendToAgent() {
+        sendToAgent.mutate(ticket.id);
+        setIsConfirmingSendToAgent(false);
     }
 
     function handleRejectResolution(event: FormEvent<HTMLFormElement>) {
@@ -106,6 +108,15 @@ export function TicketActions({ ticket }: TicketActionsProps) {
                     <Button onClick={handleSendToAgent} disabled={sendToAgent.isPending}>
                         {sendToAgent.isPending ? "Enviando..." : "Enviar para análise do suporte"}
                     </Button>
+
+                    <ConfirmationDialog
+                        open={isConfirmingSendToAgent}
+                        title="Enviar para análise do suporte"
+                        description="Confirme que você já enviou as informações solicitadas. O chamado será devolvido para a fila do agente responsável."
+                        confirmLabel="Enviar para análise"
+                        onConfirm={confirmSendToAgent}
+                        onClose={() => setIsConfirmingSendToAgent(false)}
+                    />
 
                     {sendToAgent.isError && (
                         <p role="alert" className="text-sm text-red-200">
@@ -167,6 +178,7 @@ export function TicketActions({ ticket }: TicketActionsProps) {
                             placeholder="Ex: O problema ainda acontece após seguir as orientações."
                             value={rejectionReason}
                             onChange={(event) => setRejectionReason(event.target.value)}
+                            maxLength={VALIDATION_LIMITS.rejectionReason}
                             disabled={rejectResolution.isPending}
                             className="min-h-24 resize-y"
                             aria-describedby={rejectResolution.isError ? "rejection-error" : undefined}
@@ -259,10 +271,11 @@ export function TicketActions({ ticket }: TicketActionsProps) {
             </div>
 
             {mutationError && (
-                <p className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-destructive">
                     {errorMessage}
                 </p>
             )}
+
         </div>
     )
 }

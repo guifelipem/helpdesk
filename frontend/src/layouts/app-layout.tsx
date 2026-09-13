@@ -8,7 +8,7 @@ export function AppLayout() {
     const { user, logout } = useAuthStore();
 
     const navClass = ({ isActive }: { isActive: boolean }) =>
-        `group flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all ${
+        `group flex shrink-0 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all lg:shrink ${
             isActive
                 ? "bg-white/18 text-white shadow-[inset_0_0_0_1px_#ffffff24]"
                 : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -36,7 +36,7 @@ export function AppLayout() {
                     </div>
                 </div>
 
-                <nav className="mt-4 flex gap-2 lg:mt-10 lg:flex-col">
+                <nav aria-label="Navegação principal" className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:mt-10 lg:flex-col lg:overflow-visible lg:pb-0">
                     {user?.role === "CLIENT" ? (
                         <>
                             <NavLink to="/home" className={navClass}>
