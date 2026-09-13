@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Headphones, Mail } from "lucide-react";
 import { ThemeToggle } from "@/features/theme/components/theme-toggle";
 import { PasswordInput } from "@/features/auth/components/password-input";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -84,6 +85,7 @@ export function LoginPage() {
                   className="pl-10"
                   aria-invalid={!!form.formState.errors.email}
                   aria-describedby={form.formState.errors.email ? "email-error" : undefined}
+                  maxLength={VALIDATION_LIMITS.email}
                   {...form.register("email")}
                 />
               </div>
@@ -102,6 +104,7 @@ export function LoginPage() {
                   placeholder="Sua senha"
                   aria-invalid={!!form.formState.errors.password}
                   aria-describedby={form.formState.errors.password ? "password-error" : undefined}
+                  maxLength={VALIDATION_LIMITS.password}
                   {...form.register("password")}
               />
               {form.formState.errors.password && (

@@ -14,21 +14,27 @@ import { ProtectedRoute } from "@/features/auth/components/protected.route"
 import { InitialRoute } from "@/features/auth/components/initial-route";
 import { AppLayout } from "@/layouts/app-layout";
 import { AccountPage } from "@/pages/account/account-page";
+import { NotFoundPage } from "@/pages/errors/not-found-page";
+import { RouteErrorPage } from "@/pages/errors/route-error-page";
 
 export const router = createBrowserRouter([
     {
         path: "/login",
         element: <LoginPage />,
+        errorElement: <RouteErrorPage />,
     },
     {
         path: "/register",
         element: <RegisterPage />,
+        errorElement: <RouteErrorPage />,
     },
     {
         element: <ProtectedRoute />,
+        errorElement: <RouteErrorPage />,
         children: [
             {
                 element: <AppLayout />,
+                errorElement: <RouteErrorPage />,
                 children: [
                     {
                         path: "/",
@@ -69,6 +75,10 @@ export const router = createBrowserRouter([
                     {
                         path: "/account",
                         element: <AccountPage />,
+                    },
+                    {
+                        path: "*",
+                        element: <NotFoundPage />,
                     }
                 ]
             }

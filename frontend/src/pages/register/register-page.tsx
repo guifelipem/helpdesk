@@ -14,6 +14,7 @@ import { registerSchema, type RegisterFormData } from "@/features/auth/schemas/r
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { ThemeToggle } from "@/features/theme/components/theme-toggle";
 import { getApiErrorMessage } from "@/shared/utils/get-api-error-message";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ export function RegisterPage() {
               <Label htmlFor="name">Nome</Label>
               <div className="relative">
                 <UserRound className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="name" autoComplete="name" placeholder="Seu nome" className="pl-10" aria-invalid={!!form.formState.errors.name} {...form.register("name")} />
+                <Input id="name" autoComplete="name" placeholder="Seu nome" className="pl-10" maxLength={VALIDATION_LIMITS.userName} aria-invalid={!!form.formState.errors.name} {...form.register("name")} />
               </div>
               {form.formState.errors.name && <p role="alert" className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
             </div>
@@ -65,20 +66,20 @@ export function RegisterPage() {
               <Label htmlFor="register-email">E-mail</Label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="register-email" type="email" autoComplete="email" placeholder="voce@email.com" className="pl-10" aria-invalid={!!form.formState.errors.email} {...form.register("email")} />
+                <Input id="register-email" type="email" autoComplete="email" placeholder="voce@email.com" className="pl-10" maxLength={VALIDATION_LIMITS.email} aria-invalid={!!form.formState.errors.email} {...form.register("email")} />
               </div>
               {form.formState.errors.email && <p role="alert" className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="register-password">Senha</Label>
-              <PasswordInput id="register-password" autoComplete="new-password" placeholder="Mínimo de 6 caracteres" aria-invalid={!!form.formState.errors.password} {...form.register("password")} />
+              <PasswordInput id="register-password" autoComplete="new-password" placeholder="Mínimo de 6 caracteres" maxLength={VALIDATION_LIMITS.password} aria-invalid={!!form.formState.errors.password} {...form.register("password")} />
               {form.formState.errors.password && <p role="alert" className="text-sm text-destructive">{form.formState.errors.password.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirmar senha</Label>
-              <PasswordInput id="confirm-password" autoComplete="new-password" placeholder="Digite a senha novamente" aria-invalid={!!form.formState.errors.confirmPassword} {...form.register("confirmPassword")} />
+              <PasswordInput id="confirm-password" autoComplete="new-password" placeholder="Digite a senha novamente" maxLength={VALIDATION_LIMITS.password} aria-invalid={!!form.formState.errors.confirmPassword} {...form.register("confirmPassword")} />
               {form.formState.errors.confirmPassword && <p role="alert" className="text-sm text-destructive">{form.formState.errors.confirmPassword.message}</p>}
             </div>
 

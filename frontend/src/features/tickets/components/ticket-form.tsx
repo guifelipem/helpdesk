@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { createTicketSchema, type CreateTicketFormData } from "../schemas/create-ticket.schema";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 type TicketFormProps = {
     onSubmit: (data: CreateTicketFormData) => void;
@@ -36,6 +37,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                     placeholder="Ex: Não consigo acessar o sistema"
                     aria-invalid={!!errors.title}
                     aria-describedby={errors.title ? "title-error" : undefined}
+                    maxLength={VALIDATION_LIMITS.ticketTitle}
                     {...register("title")}
                 />
                 {errors.title && (
@@ -53,6 +55,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                     className="min-h-32"
                     aria-invalid={!!errors.description}
                     aria-describedby={errors.description ? "description-error" : undefined}
+                    maxLength={VALIDATION_LIMITS.ticketDescription}
                     {...register("description")}
                 />
                 {errors.description && (

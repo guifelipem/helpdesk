@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button"
 type ErrorStateProps = {
     title?: string;
     description?: string;
-    onRetry: () => void;
+    onRetry?: () => void;
     isRetrying?: boolean;
+    actionLabel?: string;
 };
 
 export function ErrorState({
@@ -12,6 +13,7 @@ export function ErrorState({
     description = "Ocorreu um erro ao buscar as informações. Verifique sua conexão e tente novamente.",
     onRetry,
     isRetrying = false,
+    actionLabel = "Tentar novamente",
 }: ErrorStateProps) {
     return (
         <div role="alert" className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center">
@@ -23,14 +25,16 @@ export function ErrorState({
                 {description}
             </p>
 
-            <Button
-                type="button"
-                className="mt-4"
-                onClick={onRetry}
-                disabled={isRetrying}
-            >
-                {isRetrying ? "Tentando novamente..." : "Tentar novamente"}
-            </Button>
+            {onRetry && (
+                <Button
+                    type="button"
+                    className="mt-4"
+                    onClick={onRetry}
+                    disabled={isRetrying}
+                >
+                    {isRetrying ? "Tentando novamente..." : actionLabel}
+                </Button>
+            )}
         </div>
     )
 }

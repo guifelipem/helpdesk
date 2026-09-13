@@ -58,12 +58,12 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                                 Chamado #{ticket.id}
                             </p>
 
-                            <CardTitle className="mt-1 text-2xl">
+                            <CardTitle className="mt-1 break-words text-2xl">
                                 {ticket.title}
                             </CardTitle>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <TicketStatusBadge status={ticket.status} />
                             <TicketPriorityBadge priority={ticket.priority} />
                         </div>
@@ -95,13 +95,17 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 </CardHeader>
 
                 <CardContent>
-                    <p className="whitespace-pre-line rounded-xl bg-muted/60 p-4 text-sm leading-7 text-foreground">
+                    <p className="break-words whitespace-pre-line rounded-xl bg-muted/60 p-4 text-sm leading-7 text-foreground">
                         {ticket.description}
                     </p>
                 </CardContent>
             </Card>
 
-            <CommentSection ticketId={ticket.id} ticketStatus={ticket.status}/>
+            <CommentSection
+                ticketId={ticket.id}
+                ticketStatus={ticket.status}
+                assignedToId={ticket.assignedTo?.id ?? null}
+            />
 
             <TicketHistorySection ticketId={ticket.id} />
         </div>
