@@ -2,21 +2,31 @@ package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
+import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
+import com.github.guifelipem.dto.ticket.TransferTicketRequest;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardSummary;
+import com.github.guifelipem.dto.ticket.AgentActiveTicketsResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketPerformanceResponse;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.TicketHistory;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketHistoryAction;
 import com.github.guifelipem.enums.TicketPriority;
+import com.github.guifelipem.enums.TicketQueue;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.ForbiddenException;
 import com.github.guifelipem.exception.InvalidTicketStatusTransitionException;
+import com.github.guifelipem.exception.InvalidTicketManagementException;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
 import com.github.guifelipem.exception.TicketNotFoundException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
+import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.AuthenticatedUserProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,9 +42,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
+import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,6 +65,9 @@ class TicketServiceTest {
 
         @Mock
         private TicketHistoryRepository ticketHistoryRepository;
+
+        @Mock
+        private UserRepository userRepository;
 
         @InjectMocks
         private TicketService ticketService;
@@ -185,9 +202,15 @@ class TicketServiceTest {
 
         @Test
         void shouldThrowForbiddenExceptionWhenTryingToUpdateStatusToClosed() {
+                User agent = User.builder()
+                        .id(1L)
+                        .role(UserRole.AGENT)
+                        .build();
+
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(TicketStatus.RESOLVED)
+                        .assignedTo(agent)
                         .build();
 
                 UpdateTicketStatusRequest updateTicketStatusRequest =
@@ -195,6 +218,9 @@ class TicketServiceTest {
 
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
 
                 ForbiddenException exception = assertThrows(
                         ForbiddenException.class,
@@ -209,9 +235,15 @@ class TicketServiceTest {
 
         @Test
         void shouldThrowInvalidTicketStatusTransitionExceptionWhenTransitionIsInvalid() {
+                User agent = User.builder()
+                        .id(1L)
+                        .role(UserRole.AGENT)
+                        .build();
+
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(TicketStatus.OPEN)
+                        .assignedTo(agent)
                         .build();
 
                 UpdateTicketStatusRequest updateTicketStatusRequest =
@@ -219,6 +251,9 @@ class TicketServiceTest {
 
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
 
                 InvalidTicketStatusTransitionException exception = assertThrows(
                         InvalidTicketStatusTransitionException.class,
@@ -243,6 +278,7 @@ class TicketServiceTest {
                         .id(1L)
                         .status(TicketStatus.WAITING_CLIENT)
                         .createdBy(user)
+                        .assignedTo(user)
                         .build();
 
                 UpdateTicketStatusRequest request =
@@ -284,6 +320,129 @@ class TicketServiceTest {
                 assertEquals(TicketStatus.IN_PROGRESS.name(), historyToSave.getNewValue());
                 assertEquals(user, historyToSave.getPerformedBy());
                 assertNotNull(historyToSave.getCreatedAt());
+        }
+
+        @Test
+        void shouldAllowResponsibleAgentToResumeTicketWaitingForAgent() {
+                User agent = User.builder().id(1L).name("Agente").role(UserRole.AGENT).build();
+                User client = User.builder().id(2L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_AGENT)
+                        .createdBy(client)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.updateStatus(
+                        1L,
+                        new UpdateTicketStatusRequest(TicketStatus.IN_PROGRESS)
+                );
+
+                assertEquals(TicketStatus.IN_PROGRESS, response.status());
+                assertSame(agent, ticket.getAssignedTo());
+
+                ArgumentCaptor<TicketHistory> historyCaptor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+                assertEquals(TicketStatus.WAITING_AGENT.name(), historyCaptor.getValue().getOldValue());
+                assertEquals(TicketStatus.IN_PROGRESS.name(), historyCaptor.getValue().getNewValue());
+        }
+
+        @Test
+        void shouldNotAllowAgentToSendWaitingClientTicketToWaitingAgent() {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.updateStatus(
+                                1L,
+                                new UpdateTicketStatusRequest(TicketStatus.WAITING_AGENT)
+                        )
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
+        }
+
+        @Test
+        void shouldNotAllowAgentToResolveTicketWhileWaitingForClient() {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.updateStatus(
+                                1L,
+                                new UpdateTicketStatusRequest(TicketStatus.RESOLVED)
+                        )
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = UserRole.class, names = {"AGENT", "ADMIN"})
+        void shouldRejectStatusUpdateByNonResponsibleStaff(UserRole role) {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User currentUser = User.builder().id(2L).role(role).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.IN_PROGRESS)
+                        .assignedTo(responsible)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(currentUser);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.updateStatus(
+                                1L,
+                                new UpdateTicketStatusRequest(TicketStatus.WAITING_CLIENT)
+                        )
+                );
+
+                assertEquals("Somente o responsável pode alterar o status deste chamado", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldRejectTicketDetailsForAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.findById(1L)
+                );
+
+                assertEquals("Somente o responsável pode visualizar este chamado", exception.getMessage());
         }
 
         @Test
@@ -339,6 +498,7 @@ class TicketServiceTest {
         void shouldThrowInvalidTicketStatusTransitionExceptionWhenClosingTicketThatIsNotResolved() {
                 User user = User.builder()
                         .id(1L)
+                        .role(UserRole.CLIENT)
                         .build();
 
                 Ticket ticket = Ticket.builder()
@@ -368,6 +528,7 @@ class TicketServiceTest {
         void shouldCloseTicketSuccessfully() {
                 User user = User.builder()
                         .id(1L)
+                        .role(UserRole.CLIENT)
                         .build();
 
                 Ticket ticket = Ticket.builder()
@@ -415,7 +576,235 @@ class TicketServiceTest {
         }
 
         @Test
+        void shouldRejectResolutionSuccessfully() {
+                User client = User.builder().id(1L).name("Cliente").role(UserRole.CLIENT).build();
+                User agent = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .createdBy(client)
+                        .assignedTo(agent)
+                        .build();
+                RejectResolutionRequest request = new RejectResolutionRequest("O problema ainda acontece.");
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.rejectResolution(1L, request);
+
+                assertEquals(TicketStatus.IN_PROGRESS, response.status());
+                assertEquals(agent.getId(), response.assignedTo().id());
+                assertEquals(TicketStatus.IN_PROGRESS, ticket.getStatus());
+                assertSame(agent, ticket.getAssignedTo());
+                assertNotNull(ticket.getUpdatedAt());
+
+                ArgumentCaptor<TicketHistory> historyCaptor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+
+                TicketHistory history = historyCaptor.getValue();
+                assertEquals(TicketHistoryAction.RESOLUTION_REJECTED, history.getAction());
+                assertEquals(TicketStatus.RESOLVED.name(), history.getOldValue());
+                assertEquals(TicketStatus.IN_PROGRESS.name(), history.getNewValue());
+                assertEquals(request.reason(), history.getDetails());
+                assertSame(client, history.getPerformedBy());
+                assertNotNull(history.getCreatedAt());
+        }
+
+        @Test
+        void shouldRejectResolutionRejectionByClientWhoDoesNotOwnTicket() {
+                User owner = User.builder().id(1L).role(UserRole.CLIENT).build();
+                User anotherClient = User.builder().id(2L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .createdBy(owner)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherClient);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                assertEquals("Somente o cliente dono do chamado pode rejeitar a resolução", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
+        }
+
+        @Test
+        void shouldRejectResolutionRejectionByNonClientEvenWhenTicketOwner() {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.RESOLVED)
+                        .createdBy(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+
+                assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldRejectResolutionRejectionWhenTicketIsNotResolved() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.IN_PROGRESS)
+                        .createdBy(client)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                InvalidTicketStatusTransitionException exception = assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                assertEquals("Apenas chamados resolvidos podem ter a resolução rejeitada", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldNotReopenClosedTicketThroughResolutionRejection() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.CLOSED)
+                        .createdBy(client)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.rejectResolution(1L, new RejectResolutionRequest("Ainda falha"))
+                );
+
+                assertEquals(TicketStatus.CLOSED, ticket.getStatus());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
+        }
+
+        @Test
+        void shouldSendWaitingClientTicketToAgentSuccessfully() {
+                User client = User.builder().id(1L).name("Cliente").role(UserRole.CLIENT).build();
+                User agent = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(client)
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.sendToAgent(1L);
+
+                assertEquals(TicketStatus.WAITING_AGENT, response.status());
+                assertSame(agent, ticket.getAssignedTo());
+                assertNotNull(ticket.getUpdatedAt());
+
+                ArgumentCaptor<TicketHistory> historyCaptor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(historyCaptor.capture());
+
+                TicketHistory history = historyCaptor.getValue();
+                assertEquals(TicketHistoryAction.STATUS_CHANGED, history.getAction());
+                assertEquals(TicketStatus.WAITING_CLIENT.name(), history.getOldValue());
+                assertEquals(TicketStatus.WAITING_AGENT.name(), history.getNewValue());
+                assertSame(client, history.getPerformedBy());
+                assertNull(history.getDetails());
+        }
+
+        @Test
+        void shouldRejectSendingTicketToAgentByClientWhoDoesNotOwnIt() {
+                User owner = User.builder().id(1L).role(UserRole.CLIENT).build();
+                User anotherClient = User.builder().id(2L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(owner)
+                        .assignedTo(User.builder().id(3L).build())
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherClient);
+
+                assertThrows(ForbiddenException.class, () -> ticketService.sendToAgent(1L));
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
+        }
+
+        @Test
+        void shouldRejectSendingTicketToAgentWhenStatusIsNotWaitingClient() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.IN_PROGRESS)
+                        .createdBy(client)
+                        .assignedTo(User.builder().id(2L).build())
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.sendToAgent(1L)
+                );
+
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
+        void shouldRejectSendingUnassignedTicketToAgent() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(client)
+                        .assignedTo(null)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+
+                InvalidTicketStatusTransitionException exception = assertThrows(
+                        InvalidTicketStatusTransitionException.class,
+                        () -> ticketService.sendToAgent(1L)
+                );
+
+                assertEquals("Um chamado sem responsável não pode aguardar análise do suporte", exception.getMessage());
+                verify(ticketRepository, never()).save(any(Ticket.class));
+        }
+
+        @Test
         void shouldThrowTicketNotFoundExceptionWhenAssigningNonExistingTicket() {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
+                        .thenReturn(agent);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(0);
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.empty());
 
@@ -428,19 +817,32 @@ class TicketServiceTest {
                         "Chamado não encontrado",
                         exception.getMessage()
                 );
+
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
         }
 
         @ParameterizedTest
         @EnumSource(
                 value = TicketStatus.class,
-                names = {"RESOLVED", "CLOSED"}
+                names = {"IN_PROGRESS", "WAITING_CLIENT", "WAITING_AGENT", "RESOLVED", "CLOSED"}
         )
-        void shouldThrowInvalidTicketStatusTransitionExceptionWhenAssigningFinalizedTicket(TicketStatus status) {
+        void shouldThrowInvalidTicketStatusTransitionExceptionWhenAssigningNonOpenTicket(TicketStatus status) {
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
+
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(status)
                         .build();
 
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
+                        .thenReturn(agent);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(0);
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
 
@@ -450,13 +852,17 @@ class TicketServiceTest {
                 );
 
                 assertEquals(
-                        "Chamado finalizado ou fechado não podem ser atribuídos",
+                        "Apenas chamados em aberto podem ser atribuídos",
                         exception.getMessage()
                 );
+
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
         }
 
         @Test
         void shouldThrowTicketAlreadyAssignedExceptionWhenTicketAlreadyAssigned() {
+                User agent = User.builder().id(2L).role(UserRole.AGENT).build();
+
                 User agentAssigned = User.builder()
                         .id(1L)
                         .build();
@@ -467,6 +873,15 @@ class TicketServiceTest {
                         .assignedTo(agentAssigned)
                         .build();
 
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
+                        .thenReturn(agent);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(0);
                 when(ticketRepository.findById(1L))
                         .thenReturn(Optional.of(ticket));
 
@@ -479,49 +894,55 @@ class TicketServiceTest {
                         "Chamado já está atribuído a um agente",
                         exception.getMessage()
                 );
+
+                verify(ticketHistoryRepository, never()).save(any(TicketHistory.class));
         }
 
-        @ParameterizedTest
-        @EnumSource(
-                value = TicketStatus.class,
-                names = {"OPEN", "IN_PROGRESS", "WAITING_CLIENT"}
-        )
-        void shouldAssignTicketSuccessfully(TicketStatus status) {
+        @Test
+        void shouldAssignTicketSuccessfully() {
                 User agent = User.builder()
                         .id(1L)
+                        .name("Agente")
+                        .role(UserRole.AGENT)
                         .build();
 
                 User user = User.builder()
                         .id(2L)
                         .build();
 
-                Ticket ticket = Ticket.builder()
+                Ticket updatedTicket = Ticket.builder()
                         .id(1L)
                         .createdBy(user)
-                        .status(status)
+                        .assignedTo(agent)
+                        .status(TicketStatus.IN_PROGRESS)
                         .build();
 
-                when(ticketRepository.findById(1L))
-                        .thenReturn(Optional.of(ticket));
-
-                when(authenticatedUserProvider.getAuthenticatedUser())
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
                         .thenReturn(agent);
 
-                when(ticketRepository.save(ticket))
-                        .thenReturn(ticket);
+                when(ticketRepository.assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                )).thenReturn(1);
+
+                when(ticketRepository.findById(1L))
+                        .thenReturn(Optional.of(updatedTicket));
 
                 TicketResponse response = ticketService.assignToMe(1L);
 
                 // Assert
-                ArgumentCaptor<Ticket> ticketCaptor =
-                        ArgumentCaptor.forClass(Ticket.class);
+                verify(ticketRepository).assignIfAvailable(
+                        eq(1L),
+                        eq(agent),
+                        eq(TicketStatus.OPEN),
+                        eq(TicketStatus.IN_PROGRESS),
+                        any(LocalDateTime.class)
+                );
+                verify(ticketRepository, never()).save(any(Ticket.class));
 
-                verify(ticketRepository).save(ticketCaptor.capture());
-
-                Ticket ticketToSave = ticketCaptor.getValue();
-
-                assertEquals(TicketStatus.IN_PROGRESS, ticketToSave.getStatus());
-                assertEquals(agent, ticketToSave.getAssignedTo());
                 assertEquals(1L, response.id());
                 assertEquals(TicketStatus.IN_PROGRESS, response.status());
                 assertEquals(agent.getId(), response.assignedTo().id());
@@ -537,16 +958,16 @@ class TicketServiceTest {
                 TicketHistory statusHistory = histories.get(0);
                 TicketHistory assignmentHistory = histories.get(1);
 
-                assertEquals(ticketToSave, statusHistory.getTicket());
+                assertEquals(updatedTicket, statusHistory.getTicket());
                 assertEquals(TicketHistoryAction.STATUS_CHANGED, statusHistory.getAction());
-                assertEquals(status.name(), statusHistory.getOldValue());
+                assertEquals(TicketStatus.OPEN.name(), statusHistory.getOldValue());
                 assertEquals(TicketStatus.IN_PROGRESS.name(), statusHistory.getNewValue());
                 assertEquals(agent, statusHistory.getPerformedBy());
 
-                assertEquals(ticketToSave, assignmentHistory.getTicket());
+                assertEquals(updatedTicket, assignmentHistory.getTicket());
                 assertEquals(TicketHistoryAction.TICKET_ASSIGNED, assignmentHistory.getAction());
                 assertNull(assignmentHistory.getOldValue());
-                assertEquals(ticketToSave.getAssignedTo().getName(), assignmentHistory.getNewValue());
+                assertEquals(agent.getName(), assignmentHistory.getNewValue());
                 assertEquals(agent, assignmentHistory.getPerformedBy());
 
                 assertNotNull(statusHistory.getCreatedAt());
@@ -554,19 +975,21 @@ class TicketServiceTest {
         }
 
         @Test
-        void shouldFindAllSuccessfully() {
+        void shouldFindAllTicketsFilteredByAssignedAgentAsAdminSuccessfully() {
                 TicketStatus status = TicketStatus.OPEN;
                 TicketPriority priority = TicketPriority.LOW;
+                Long agentId = 2L;
                 String search = "Teste";
                 Pageable pageable = PageRequest.of(0, 10);
 
-                User user = User.builder()
+                User admin = User.builder()
                         .id(1L)
+                        .role(UserRole.ADMIN)
                         .build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
-                        .createdBy(user)
+                        .createdBy(admin)
                         .build();
 
                 Page<Ticket> ticketsPage = new PageImpl<>(
@@ -575,12 +998,16 @@ class TicketServiceTest {
                         1
                 );
 
-                when(ticketRepository.findAllWithFilters(status, priority, search, pageable))
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(admin);
+
+                when(ticketRepository.findAllWithFilters(status, priority, agentId, true, true, search, pageable))
                         .thenReturn(ticketsPage);
 
-                PageResponse<TicketResponse> response = ticketService.findAll(status, priority, search, pageable);
+                PageResponse<TicketResponse> response = ticketService.findAll(status, priority, agentId, true, true, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, search, pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, agentId, true, true, search, pageable);
+                verify(ticketRepository, never()).findAllVisibleToAgentWithFilters(any(), any(), any(), any(), any());
 
                 assertEquals(1, response.content().size());
                 assertEquals(1L, response.content().getFirst().id());
@@ -593,19 +1020,26 @@ class TicketServiceTest {
         }
 
         @Test
-        void shouldTrimSearchBeforeFindingTickets() {
-                TicketStatus status = TicketStatus.OPEN;
-                TicketPriority priority = TicketPriority.LOW;
-                String search = "     Teste    ";
+        void shouldFindOnlyTicketsVisibleToAuthenticatedAgent() {
+                TicketStatus status = TicketStatus.IN_PROGRESS;
+                TicketPriority priority = TicketPriority.HIGH;
+                String search = "  Sistema  ";
                 Pageable pageable = PageRequest.of(0, 10);
 
-                User user = User.builder()
+                User agent = User.builder()
+                        .id(2L)
+                        .role(UserRole.AGENT)
+                        .build();
+
+                User client = User.builder()
                         .id(1L)
+                        .role(UserRole.CLIENT)
                         .build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
-                        .createdBy(user)
+                        .createdBy(client)
+                        .assignedTo(agent)
                         .build();
 
                 Page<Ticket> ticketsPage = new PageImpl<>(
@@ -614,12 +1048,59 @@ class TicketServiceTest {
                         1
                 );
 
-                when(ticketRepository.findAllWithFilters(status, priority, "Teste", pageable))
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(agent);
+
+                when(ticketRepository.findAllVisibleToAgentWithFilters(
+                        agent.getId(), status, priority, "Sistema", pageable
+                )).thenReturn(ticketsPage);
+
+                PageResponse<TicketResponse> response = ticketService.findAll(
+                        status, priority, 99L, true, true, search, pageable
+                );
+
+                verify(ticketRepository).findAllVisibleToAgentWithFilters(
+                        agent.getId(), status, priority, "Sistema", pageable
+                );
+                verify(ticketRepository, never()).findAllWithFilters(any(), any(), any(), anyBoolean(), anyBoolean(), any(), any());
+
+                assertEquals(1, response.content().size());
+                assertEquals(ticket.getId(), response.content().getFirst().id());
+                assertEquals(agent.getId(), response.content().getFirst().assignedTo().id());
+        }
+
+        @Test
+        void shouldTrimSearchBeforeFindingTickets() {
+                TicketStatus status = TicketStatus.OPEN;
+                TicketPriority priority = TicketPriority.LOW;
+                String search = "     Teste    ";
+                Pageable pageable = PageRequest.of(0, 10);
+
+                User admin = User.builder()
+                        .id(1L)
+                        .role(UserRole.ADMIN)
+                        .build();
+
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(admin)
+                        .build();
+
+                Page<Ticket> ticketsPage = new PageImpl<>(
+                        List.of(ticket),
+                        pageable,
+                        1
+                );
+
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(admin);
+
+                when(ticketRepository.findAllWithFilters(status, priority, null, false, false, "Teste", pageable))
                         .thenReturn(ticketsPage);
 
-                ticketService.findAll(status, priority, search, pageable);
+                ticketService.findAll(status, priority, null, null, null, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, "Teste", pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, null, false, false, "Teste", pageable);
         }
 
         @ParameterizedTest
@@ -630,13 +1111,14 @@ class TicketServiceTest {
                 TicketPriority priority = TicketPriority.LOW;
                 Pageable pageable = PageRequest.of(0, 10);
 
-                User user = User.builder()
+                User admin = User.builder()
                         .id(1L)
+                        .role(UserRole.ADMIN)
                         .build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
-                        .createdBy(user)
+                        .createdBy(admin)
                         .build();
 
                 Page<Ticket> ticketsPage = new PageImpl<>(
@@ -645,12 +1127,15 @@ class TicketServiceTest {
                         1
                 );
 
-                when(ticketRepository.findAllWithFilters(status, priority, null, pageable))
+                when(authenticatedUserProvider.getAuthenticatedUser())
+                        .thenReturn(admin);
+
+                when(ticketRepository.findAllWithFilters(status, priority, null, false, false, null, pageable))
                         .thenReturn(ticketsPage);
 
-                ticketService.findAll(status, priority, search, pageable);
+                ticketService.findAll(status, priority, null, null, null, search, pageable);
 
-                verify(ticketRepository).findAllWithFilters(status, priority, null, pageable);
+                verify(ticketRepository).findAllWithFilters(status, priority, null, false, false, null, pageable);
         }
 
         @Test
@@ -658,6 +1143,7 @@ class TicketServiceTest {
                 User user = User.builder()
                         .id(1L)
                         .build();
+                Pageable pageable = PageRequest.of(0, 10);
 
                 Ticket ticket1 = Ticket.builder()
                         .id(1L)
@@ -669,23 +1155,30 @@ class TicketServiceTest {
                         .createdBy(user)
                         .build();
 
-                List<Ticket> meusTickets= List.of(ticket1, ticket2);
+                Page<Ticket> myTickets = new PageImpl<>(List.of(ticket1, ticket2), pageable, 2);
 
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(user);
 
-                when(ticketRepository.findByCreatedBy(user))
-                        .thenReturn(meusTickets);
+                when(ticketRepository.findAllCreatedByWithFilters(
+                        user.getId(), Set.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS), TicketPriority.HIGH, "erro", pageable
+                )).thenReturn(myTickets);
 
-                List<TicketResponse> response = ticketService.findMyTickets();
+                PageResponse<TicketResponse> response = ticketService.findMyTickets(
+                        Set.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS), TicketPriority.HIGH, "  erro  ", pageable
+                );
 
-                verify(ticketRepository).findByCreatedBy(user);
+                verify(ticketRepository).findAllCreatedByWithFilters(
+                        user.getId(), Set.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS), TicketPriority.HIGH, "erro", pageable
+                );
 
-                assertEquals(2, response.size());
+                assertEquals(2, response.content().size());
+                assertEquals(2, response.totalElements());
+                assertEquals(0, response.page());
 
-                assertEquals(1L, response.getFirst().id());
-                assertEquals(2L, response.get(1).id());
-                assertEquals(user.getId(), response.getFirst().createdBy().id());
+                assertEquals(1L, response.content().getFirst().id());
+                assertEquals(2L, response.content().get(1).id());
+                assertEquals(user.getId(), response.content().getFirst().createdBy().id());
         }
 
         @Test
@@ -693,18 +1186,25 @@ class TicketServiceTest {
                 User user = User.builder()
                         .id(1L)
                         .build();
+                Pageable pageable = PageRequest.of(0, 10);
 
                 when(authenticatedUserProvider.getAuthenticatedUser())
                         .thenReturn(user);
 
-                when(ticketRepository.findByCreatedBy(user))
-                        .thenReturn(List.of());
+                when(ticketRepository.findAllCreatedByWithFilters(
+                        user.getId(), EnumSet.allOf(TicketStatus.class), null, null, pageable
+                )).thenReturn(Page.empty(pageable));
 
-                List<TicketResponse> response = ticketService.findMyTickets();
+                PageResponse<TicketResponse> response = ticketService.findMyTickets(
+                        null, null, "   ", pageable
+                );
 
-                verify(ticketRepository).findByCreatedBy(user);
+                verify(ticketRepository).findAllCreatedByWithFilters(
+                        user.getId(), EnumSet.allOf(TicketStatus.class), null, null, pageable
+                );
 
-                assertTrue(response.isEmpty());
+                assertTrue(response.content().isEmpty());
+                assertEquals(0, response.totalElements());
         }
 
         @Test
@@ -761,5 +1261,236 @@ class TicketServiceTest {
 
                 assertEquals(1L, response.id());
                 assertEquals(user.getId(), response.createdBy().id());
+        }
+        @Test
+        void shouldAllowAdminToViewTicketAssignedToAnotherAgent() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User agent = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                User client = User.builder().id(3L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(1L).createdBy(client).assignedTo(agent).build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+
+                assertEquals(agent.getId(), ticketService.findById(1L).assignedTo().id());
+        }
+
+        @Test
+        void shouldRejectAdminTryingToAssumeTicket() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate()).thenReturn(admin);
+
+                ForbiddenException exception = assertThrows(ForbiddenException.class, () -> ticketService.assignToMe(1L));
+
+                assertEquals("Somente agentes podem assumir chamados", exception.getMessage());
+                verify(ticketRepository, never()).assignIfAvailable(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldRejectAssignmentWhenLockedUserIsNoLongerAnAgent() {
+                User lockedClient = User.builder().id(1L).role(UserRole.CLIENT).build();
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate()).thenReturn(lockedClient);
+
+                ForbiddenException exception = assertThrows(ForbiddenException.class, () -> ticketService.assignToMe(1L));
+
+                assertEquals("Somente agentes podem assumir chamados", exception.getMessage());
+                verify(ticketRepository, never()).assignIfAvailable(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldReturnAssignedTicketToQueueAndRegisterHistory() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User agent = User.builder().id(2L).name("Agente atual").role(UserRole.AGENT).build();
+                User client = User.builder().id(3L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(10L).createdBy(client).assignedTo(agent)
+                        .status(TicketStatus.WAITING_CLIENT).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.returnToQueue(10L);
+
+                assertNull(response.assignedTo());
+                assertEquals(TicketStatus.OPEN, response.status());
+                ArgumentCaptor<TicketHistory> captor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository, times(2)).save(captor.capture());
+                assertEquals(TicketHistoryAction.TICKET_RETURNED_TO_QUEUE,
+                        captor.getAllValues().get(1).getAction());
+                assertEquals(admin, captor.getAllValues().get(1).getPerformedBy());
+        }
+
+        @Test
+        void shouldTransferTicketBetweenActiveAgentsAndRegisterAdmin() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User previous = User.builder().id(2L).name("Anterior").role(UserRole.AGENT).build();
+                User target = User.builder().id(3L).name("Novo").role(UserRole.AGENT).active(true).build();
+                User client = User.builder().id(4L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(10L).createdBy(client).assignedTo(previous)
+                        .status(TicketStatus.IN_PROGRESS).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.transfer(10L, new TransferTicketRequest(target.getId()));
+
+                assertEquals(target.getId(), response.assignedTo().id());
+                assertEquals(TicketStatus.IN_PROGRESS, response.status());
+                ArgumentCaptor<TicketHistory> captor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(captor.capture());
+                assertEquals(TicketHistoryAction.TICKET_TRANSFERRED, captor.getValue().getAction());
+                assertEquals("Anterior", captor.getValue().getOldValue());
+                assertEquals("Novo", captor.getValue().getNewValue());
+                assertEquals(admin, captor.getValue().getPerformedBy());
+        }
+
+        @Test
+        void shouldTransferResolvedTicketAndPreserveStatus() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User previous = User.builder().id(2L).name("Anterior").role(UserRole.AGENT).build();
+                User target = User.builder().id(3L).name("Novo").role(UserRole.AGENT).active(true).build();
+                User client = User.builder().id(4L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(10L).createdBy(client).assignedTo(previous)
+                        .status(TicketStatus.RESOLVED).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
+                when(ticketRepository.save(ticket)).thenReturn(ticket);
+
+                TicketResponse response = ticketService.transfer(10L, new TransferTicketRequest(target.getId()));
+
+                assertEquals(target.getId(), response.assignedTo().id());
+                assertEquals(TicketStatus.RESOLVED, response.status());
+                ArgumentCaptor<TicketHistory> captor = ArgumentCaptor.forClass(TicketHistory.class);
+                verify(ticketHistoryRepository).save(captor.capture());
+                assertEquals(TicketHistoryAction.TICKET_TRANSFERRED, captor.getValue().getAction());
+        }
+
+        @Test
+        void shouldRejectTransferToBlockedAgent() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User previous = User.builder().id(2L).name("Anterior").role(UserRole.AGENT).build();
+                User blocked = User.builder().id(3L).name("Bloqueado").role(UserRole.AGENT).active(false).build();
+                Ticket ticket = Ticket.builder().id(10L).assignedTo(previous).status(TicketStatus.IN_PROGRESS).build();
+
+                when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(userRepository.findById(blocked.getId())).thenReturn(Optional.of(blocked));
+
+                InvalidTicketManagementException exception = assertThrows(
+                        InvalidTicketManagementException.class,
+                        () -> ticketService.transfer(10L, new TransferTicketRequest(blocked.getId()))
+                );
+
+                assertEquals("O agente de destino está bloqueado", exception.getMessage());
+                verify(ticketRepository, never()).save(any());
+        }
+
+        @Test
+        void shouldApplyAgentScopeAndBusinessOrderingToWaitingAgentQueue() {
+                User agent = User.builder().id(7L).role(UserRole.AGENT).build();
+                User client = User.builder().id(8L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(9L).createdBy(client).assignedTo(agent)
+                        .status(TicketStatus.WAITING_AGENT).build();
+                Page<Ticket> page = new PageImpl<>(List.of(ticket), PageRequest.of(1, 5), 6);
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+                when(ticketRepository.findAllByAssignedToIdAndStatus(
+                        eq(agent.getId()), eq(TicketStatus.WAITING_AGENT), any(Pageable.class)
+                )).thenReturn(page);
+
+                PageResponse<TicketResponse> response = ticketService.findQueue(
+                        TicketQueue.WAITING_AGENT, PageRequest.of(1, 5)
+                );
+
+                ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+                verify(ticketRepository).findAllByAssignedToIdAndStatus(
+                        eq(agent.getId()), eq(TicketStatus.WAITING_AGENT), pageableCaptor.capture()
+                );
+                Pageable appliedPageable = pageableCaptor.getValue();
+                assertEquals(1, appliedPageable.getPageNumber());
+                assertEquals(5, appliedPageable.getPageSize());
+                assertEquals(Sort.Direction.ASC, appliedPageable.getSort().getOrderFor("updatedAt").getDirection());
+                assertEquals(6, response.totalElements());
+                assertEquals(agent.getId(), response.content().getFirst().assignedTo().id());
+        }
+
+        @Test
+        void shouldReturnQueueSummaryForAuthenticatedAgent() {
+                User agent = User.builder().id(7L).role(UserRole.AGENT).build();
+                TicketQueueSummaryResponse expected = new TicketQueueSummaryResponse(8, 12, 4, 3, 5);
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(agent);
+                when(ticketRepository.summarizeQueuesForAgent(agent.getId())).thenReturn(expected);
+
+                TicketQueueSummaryResponse response = ticketService.summarizeQueues();
+
+                assertEquals(expected, response);
+                verify(ticketRepository).summarizeQueuesForAgent(agent.getId());
+        }
+
+        @Test
+        void shouldReturnAdminDashboardSummaryWithActiveTicketsByAgent() {
+                AdminTicketDashboardSummary summary = new AdminTicketDashboardSummary(15, 3, 5, 2, 1, 4);
+                List<AgentActiveTicketsResponse> activeByAgent = List.of(
+                        new AgentActiveTicketsResponse(2L, "Maria", 8),
+                        new AgentActiveTicketsResponse(3L, "João", 0)
+                );
+                when(ticketRepository.summarizeForAdminDashboard()).thenReturn(summary);
+                when(userRepository.countActiveTicketsByAgent()).thenReturn(activeByAgent);
+                when(ticketRepository.findRequiringAdminAttention(any(LocalDateTime.class), any(Pageable.class)))
+                        .thenReturn(Page.empty());
+
+                AdminTicketDashboardResponse response = ticketService.summarizeAdminDashboard();
+
+                assertEquals(summary.totalActive(), response.totalActive());
+                assertEquals(summary.unassigned(), response.unassigned());
+                assertEquals(summary.inProgress(), response.inProgress());
+                assertEquals(summary.waitingClient(), response.waitingClient());
+                assertEquals(summary.waitingAgent(), response.waitingAgent());
+                assertEquals(summary.resolved(), response.resolved());
+                assertEquals(activeByAgent, response.activeByAgent());
+        }
+
+        @Test
+        void shouldReturnPerformanceAndAverageResolutionTimeForPeriod() {
+                LocalDateTime from = LocalDateTime.of(2026, 8, 1, 0, 0);
+                LocalDateTime to = LocalDateTime.of(2026, 9, 1, 0, 0);
+                when(ticketRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from, to)).thenReturn(42L);
+                when(ticketHistoryRepository.countDistinctTicketsTransitionedTo(
+                        TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+                )).thenReturn(35L);
+                when(ticketHistoryRepository.countDistinctTicketsTransitionedTo(
+                        TicketHistoryAction.STATUS_CHANGED, TicketStatus.CLOSED.name(), from, to
+                )).thenReturn(31L);
+                when(ticketHistoryRepository.findFirstResolutionTimes(
+                        TicketHistoryAction.STATUS_CHANGED, TicketStatus.RESOLVED.name(), from, to
+                )).thenReturn(List.of(
+                        new Object[]{from, from.plusHours(12)},
+                        new Object[]{from, from.plusHours(24)}
+                ));
+
+                AdminTicketPerformanceResponse response = ticketService.summarizeAdminPerformance(from, to);
+
+                assertEquals(42, response.created());
+                assertEquals(35, response.resolved());
+                assertEquals(31, response.closed());
+                assertEquals(18 * 60, response.averageResolutionMinutes());
+        }
+
+        @Test
+        void shouldNotTreatAdminAsAgentWhenAccessingQueues() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketService.findQueue(TicketQueue.MY_TICKETS, PageRequest.of(0, 10))
+                );
+
+                assertEquals("Somente agentes podem acessar as filas operacionais", exception.getMessage());
+                verifyNoInteractions(ticketRepository);
         }
 }

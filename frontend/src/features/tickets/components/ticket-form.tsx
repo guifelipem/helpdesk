@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { createTicketSchema, type CreateTicketFormData } from "../schemas/create-ticket.schema";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 type TicketFormProps = {
     onSubmit: (data: CreateTicketFormData) => void;
@@ -34,10 +35,13 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                 <Input 
                     id="title"
                     placeholder="Ex: Não consigo acessar o sistema"
+                    aria-invalid={!!errors.title}
+                    aria-describedby={errors.title ? "title-error" : undefined}
+                    maxLength={VALIDATION_LIMITS.ticketTitle}
                     {...register("title")}
                 />
                 {errors.title && (
-                    <p className="text-sm text-red-500">
+                    <p id="title-error" role="alert" className="text-sm text-destructive">
                         {errors.title.message}
                     </p>
                 )}
@@ -49,10 +53,13 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                     id="description"
                     placeholder="Descreva o problema com o máximo de detalhes possível."
                     className="min-h-32"
+                    aria-invalid={!!errors.description}
+                    aria-describedby={errors.description ? "description-error" : undefined}
+                    maxLength={VALIDATION_LIMITS.ticketDescription}
                     {...register("description")}
                 />
                 {errors.description && (
-                    <p className="text-sm text-red-500">
+                    <p id="description-error" role="alert" className="text-sm text-destructive">
                         {errors.description.message}
                     </p>
                 )}
@@ -62,7 +69,9 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                 <Label htmlFor="priority">Prioridade</Label>
                 <select
                     id="priority"
-                    className="h-11 w-full rounded-xl border border-input bg-white/80 px-3.5 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+                    className="h-11 w-full rounded-xl border border-input bg-card/80 px-3.5 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
+                    aria-invalid={!!errors.priority}
+                    aria-describedby={errors.priority ? "priority-error" : undefined}
                     {...register("priority")}
                 >
                     <option value="LOW">Baixa</option>
@@ -70,7 +79,7 @@ export function TicketForm({ onSubmit, isSubmitting }: TicketFormProps) {
                     <option value="HIGH">Alta</option>
                 </select>
                 {errors.priority && (
-                    <p className="text-sm text-red-500">
+                    <p id="priority-error" role="alert" className="text-sm text-destructive">
                         {errors.priority.message}
                     </p>
                 )}

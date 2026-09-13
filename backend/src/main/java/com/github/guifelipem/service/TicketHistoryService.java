@@ -38,6 +38,11 @@ public class TicketHistoryService {
             throw new ForbiddenException("Você não tem permissão para acessar o histórico deste chamado");
         }
 
+        if (user.getRole() == UserRole.AGENT && ticket.getAssignedTo() != null
+                && !ticket.getAssignedTo().getId().equals(user.getId())) {
+            throw new ForbiddenException("Somente o responsável pode acessar o histórico deste chamado");
+        }
+
         return ticketHistoryRepository.findByTicketIdOrderByCreatedAtAsc(ticketId)
                 .stream().map(this::toResponse).toList();
     }
@@ -55,6 +60,7 @@ public class TicketHistoryService {
                 history.getAction(),
                 history.getOldValue(),
                 history.getNewValue(),
+                history.getDetails(),
                 performedBy,
                 history.getCreatedAt()
         );

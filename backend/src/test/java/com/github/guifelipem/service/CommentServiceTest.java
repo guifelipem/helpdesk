@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 public class CommentServiceTest {
@@ -93,6 +94,30 @@ public class CommentServiceTest {
                 assertEquals(user.getId(), response.author().id());
                 assertEquals(user.getRole(), response.author().role());
                 assertNotNull(response.createdAt());
+        }
+
+        @Test
+        void shouldNotChangeWaitingClientStatusWhenClientComments() {
+                User client = User.builder()
+                        .id(1L)
+                        .name("Cliente")
+                        .role(UserRole.CLIENT)
+                        .build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .status(TicketStatus.WAITING_CLIENT)
+                        .createdBy(client)
+                        .assignedTo(User.builder().id(2L).build())
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(commentRepository.save(any(Comment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+                commentService.create(1L, new CreateCommentRequest("Informações solicitadas", false));
+
+                assertEquals(TicketStatus.WAITING_CLIENT, ticket.getStatus());
+                verify(ticketRepository, never()).save(any(Ticket.class));
         }
 
         @Test
@@ -187,9 +212,29 @@ public class CommentServiceTest {
                 );
 
                 assertEquals(
-                        "Não é possível comentar em um chamado encerrado",
+                        "Não é possível comentar em um chamado resolvido ou encerrado",
                         exception.getMessage()
                 );
+        }
+
+        @Test
+        void shouldThrowForbiddenExceptionWhenCommentingOnResolvedTicket() {
+                User client = User.builder().id(1L).role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(client)
+                        .status(TicketStatus.RESOLVED)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(client);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.create(1L, new CreateCommentRequest("Ainda falha", false))
+                );
+
+                assertEquals("Não é possível comentar em um chamado resolvido ou encerrado", exception.getMessage());
         }
 
         @Test
@@ -431,5 +476,82 @@ public class CommentServiceTest {
                 assertEquals("Comentário público", response.get(0).message());
                 assertEquals("Comentário interno", response.get(1).message());
                 assertEquals(true, response.get(1).isInternal());
+        }
+
+        @Test
+        void shouldRejectCommentByAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.create(1L, new CreateCommentRequest("Teste", true))
+                );
+
+                assertEquals("Somente o responsável pode comentar neste chamado", exception.getMessage());
+        }
+
+        @Test
+        void shouldRejectCommentsForAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.findByTicket(1L)
+                );
+
+                assertEquals(
+                        "Somente o responsável pode acessar os comentários deste chamado",
+                        exception.getMessage()
+                );
+        }
+        @Test
+        void shouldAllowAdminToReadPublicAndInternalCommentsFromAnyTicket() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User responsible = User.builder().id(2L).name("Agente").role(UserRole.AGENT).build();
+                User client = User.builder().id(3L).name("Cliente").role(UserRole.CLIENT).build();
+                Ticket ticket = Ticket.builder().id(1L).createdBy(client).assignedTo(responsible).build();
+                Comment internal = Comment.builder().id(1L).ticket(ticket).user(responsible)
+                        .message("Nota interna").isInternal(true).build();
+
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(commentRepository.findByTicketIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(internal));
+
+                List<CommentResponse> response = commentService.findByTicket(1L);
+
+                assertEquals(1, response.size());
+                assertEquals(true, response.getFirst().isInternal());
+        }
+
+        @Test
+        void shouldRejectAdminCommentEvenIfLegacyTicketIsAssignedToAdmin() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> commentService.create(1L, new CreateCommentRequest("Não permitido", true))
+                );
+
+                assertEquals("Administradores possuem acesso somente leitura aos comentários", exception.getMessage());
+                verify(commentRepository, never()).save(any());
         }
 }

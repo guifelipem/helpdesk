@@ -1,196 +1,247 @@
-# Help Desk System
+<div align="center">
 
-Sistema web de gerenciamento de chamados desenvolvido como projeto de portfólio para simular o fluxo de atendimento de uma central de suporte.
+# Helpdesk
 
-O projeto tem como objetivo aplicar boas práticas de desenvolvimento full stack utilizando Java com Spring Boot no backend e React com TypeScript no frontend, seguindo conceitos de arquitetura em camadas, APIs REST, autenticação com JWT, controle de acesso por perfis e desenvolvimento de interfaces modernas.
+**Sistema full stack de gerenciamento de chamados de suporte, com fluxos específicos para clientes, agentes e administradores.**
 
-## Status do projeto
+![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot 3.5](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-Este projeto está em desenvolvimento contínuo e faz parte do meu portfólio.
+</div>
 
-O objetivo é evoluí-lo gradualmente para um sistema completo de Help Desk, implementando funcionalidades encontradas em aplicações utilizadas no mercado, sempre priorizando qualidade de código, organização da arquitetura e boas práticas de desenvolvimento.
+## Sobre o projeto
 
-A branch `main` representa a versão estável mais recente do projeto, enquanto o desenvolvimento contínuo acontece na branch `develop`.
+O **Helpdesk** simula a operação de uma central de suporte: clientes abrem e acompanham chamados, agentes trabalham em filas operacionais e administradores supervisionam usuários, distribuição de trabalho e indicadores.
 
----
+O foco do projeto não é apenas CRUD. A aplicação implementa **regras de transição de status, autorização por perfil, atribuição concorrente de chamados, histórico auditável, comentários internos, dashboards por papel e gestão administrativa de agentes**.
 
-# Tecnologias
+### Preview - Dashboard de Administrador
 
-## Backend
+<img width="100%" alt="Dashboard de Administrador" src="https://github.com/user-attachments/assets/cb8d1bbb-8346-4a02-b7c3-269140c1407b" />
+<br />
 
-- Java 21
-- Spring Boot
-- Spring Security
-- JWT
-- Spring Data JPA
-- Hibernate
-- PostgreSQL
-- Flyway
-- Maven
-- Swagger / OpenAPI
+<details>
+<summary><strong>Ver mais telas</strong></summary>
+<br />
 
-## Frontend
+**Detalhes do chamado**
 
-- React
-- TypeScript
-- Vite
-- React Query
-- Zustand
-- React Hook Form
-- Zod
-- Tailwind CSS
-- shadcn/ui
-- Axios
+<img width="100%" alt="Detalhes de um chamado" src="https://github.com/user-attachments/assets/84baf83f-109d-4032-a57f-d0be49c366a0" />
+<br />
 
----
+**Filas de Atendimento de Agente**
 
-# Funcionalidades
+<img width="100%" alt="Filas de Atendimento de Agente" src="https://github.com/user-attachments/assets/7d1147bd-d562-4951-97ac-be777e103fe3" />
+<br />
 
-## Autenticação
+**Tela Home de Cliente**
 
-- Cadastro de usuários
-- Login com JWT
-- Controle de acesso baseado em perfis (CLIENT, AGENT e ADMIN)
-- Rotas protegidas
-- Persistência da sessão
+<img width="100%" alt="Tela Home de Cliente" src="https://github.com/user-attachments/assets/2374d351-5ae4-4583-8a07-25e0fe3fcabe" />
+<br />
 
-## Gerenciamento de chamados
+</details>
 
-- Criação de chamados
-- Listagem de chamados do cliente
-- Listagem paginada para agentes
-- Busca por título e descrição
-- Filtros por status e prioridade
-- Visualização detalhada do chamado
-- Atribuição do chamado ao agente responsável
-- Alteração de status seguindo regras de negócio
-- Fechamento do chamado pelo cliente
+## Funcionalidades
 
-## Comentários
+| Perfil | Principais recursos |
+| --- | --- |
+| **CLIENT** | Cadastro e login, abertura de chamados, filtros e paginação dos próprios chamados, comentários, acompanhamento do histórico, envio para nova análise, confirmação ou rejeição da resolução e gerenciamento da própria conta. |
+| **AGENT** | Visualização de chamados acessíveis, filas operacionais, atribuição de chamado, comentários públicos e internos, transições controladas de status, dashboard individual e métricas de desempenho por período. |
+| **ADMIN** | Supervisão global dos chamados, dashboard administrativo, filtros por agente, transferência/devolução de chamados, gestão de roles, bloqueio/desbloqueio de usuários e redistribuição de chamados ativos. |
 
-- Comentários em chamados
-- Comentários internos visíveis apenas para agentes e administradores
-- Identificação do autor
-- Exibição da data e hora dos comentários
-- Bloqueio de comentários em chamados encerrados
+### Destaques técnicos
 
-## Histórico
+- **Atribuição atômica de chamados:** a operação de assumir um chamado usa atualização condicional no banco para impedir que dois agentes assumam o mesmo ticket simultaneamente.
+- **Fluxo de status controlado:** cada papel só pode executar transições válidas para o momento atual do atendimento.
+- **Autorização além da interface:** as regras de acesso são aplicadas no backend com Spring Security e validações de domínio.
+- **Histórico auditável:** criação, mudanças de status, atribuições, transferências, devoluções e rejeições de resolução são registradas no histórico.
+- **Comentários internos:** mensagens privadas ficam disponíveis para a equipe de suporte, mas não são expostas ao cliente.
+- **Gestão segura de agentes:** um agente com chamados ativos não pode simplesmente perder a função ou ser bloqueado sem que seus chamados sejam tratados.
+- **Proteções de autenticação:** JWT stateless, senhas com BCrypt e rate limiting nos endpoints públicos de login e cadastro.
+- **Experiência por perfil:** cliente, agente e administrador possuem navegação e dashboards diferentes; a interface também oferece tema claro/escuro e estados de loading/erro.
 
-- Registro automático das alterações do chamado
-- Histórico cronológico de eventos
-- Atualização automática após alterações
+## Fluxo de um chamado
 
-## Experiência do usuário
-
-- Skeletons durante carregamento
-- Tratamento de erros da API
-- Empty states
-- Atualização automática dos dados
-- Interface responsiva
-
----
-
-# Perfis de acesso
-
-## CLIENT
-
-- Criar chamados
-- Visualizar apenas os próprios chamados
-- Comentar
-- Acompanhar o histórico
-- Fechar chamados resolvidos
-
-## AGENT
-
-- Visualizar fila de chamados
-- Assumir atendimento
-- Alterar status
-- Registrar comentários internos
-
-## ADMIN
-
-- Acesso às funcionalidades administrativas atualmente implementadas
-
----
-
-# Estrutura do projeto
-
-```text
-helpdesk/
-├── backend/
-└── frontend/
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN: cliente abre o chamado
+    OPEN --> IN_PROGRESS: agente assume
+    IN_PROGRESS --> WAITING_CLIENT: agente solicita informação
+    WAITING_CLIENT --> WAITING_AGENT: cliente responde e envia para análise
+    WAITING_AGENT --> IN_PROGRESS: agente retoma atendimento
+    IN_PROGRESS --> RESOLVED: agente resolve
+    RESOLVED --> CLOSED: cliente confirma
+    RESOLVED --> IN_PROGRESS: cliente rejeita a resolução
 ```
 
----
+## Arquitetura
 
-# Como executar
+```mermaid
+flowchart LR
+    UI[React + TypeScript] -->|HTTP / JWT| SEC[Spring Security + JWT]
+    SEC --> API[Controllers REST]
+    API --> SVC[Services / Regras de negócio]
+    SVC --> REPO[Spring Data JPA]
+    REPO --> DB[(PostgreSQL)]
+    FLY[Flyway] --> DB
+```
 
-## Backend
+O backend segue uma arquitetura em camadas, separando **controllers, services, repositories, entidades/DTOs e segurança**. No frontend, o código é organizado por **features**, com React Query para estado assíncrono, Zustand para autenticação/estado global e React Hook Form + Zod para formulários e validação.
+
+## Stack
+
+| Backend | Frontend | Infraestrutura e qualidade |
+| --- | --- | --- |
+| Java 21 | React 19 | PostgreSQL 16 |
+| Spring Boot 3.5 | TypeScript 6 | Docker / Docker Compose |
+| Spring Security | Vite 8 | Flyway |
+| Spring Data JPA / Hibernate | Tailwind CSS 4 | GitHub Actions |
+| JWT (JJWT) | React Query | JUnit 5 / Mockito |
+| Bean Validation | Zustand | Testcontainers |
+| OpenAPI / Swagger | React Hook Form + Zod | Vitest / Testing Library |
+
+## Como executar
+
+### Opção recomendada — Docker Compose
+
+**Pré-requisito:** Docker com Docker Compose.
+
+1. Na raiz do repositório, crie o arquivo de ambiente:
+
+```bash
+# Linux/macOS/Git Bash
+cp .env.example .env
+
+# PowerShell
+# Copy-Item .env.example .env
+```
+
+2. Ajuste o `.env` com valores locais. O `JWT_SECRET` deve possuir pelo menos 32 caracteres:
+
+```env
+POSTGRES_DB=helpdesk_db
+POSTGRES_USER=helpdesk_user
+POSTGRES_PASSWORD=helpdesk_pass
+JWT_SECRET=helpdesk-dev-secret-change-this-key-32-chars-minimum
+```
+
+3. Suba a aplicação:
+
+```bash
+docker compose up --build
+```
+
+Após a inicialização:
+
+- **Frontend:** http://localhost:3000
+- **API:** http://localhost:8080/api
+- **Swagger UI:** http://localhost:8080/swagger-ui/index.html
+
+### Conta administrativa de demonstração
+
+A migration cria uma conta administrativa apenas para facilitar a avaliação local do projeto:
+
+| E-mail | Senha |
+| --- | --- |
+| `admin@helpdesk.local` | `admin@123` |
+
+Novos cadastros públicos são criados como `CLIENT`. Para testar o fluxo de `AGENT`, cadastre uma segunda conta e altere sua role pelo painel administrativo.
+
+> **Nota:** a conta acima é intencionalmente uma credencial de demonstração para ambiente local/portfólio; não representa uma estratégia adequada para produção.
+
+### Dados de demonstração opcionais
+
+Com a aplicação iniciada, é possível popular o banco com um conjunto determinístico de dados fictícios:
+
+```bash
+docker compose --profile demo run --rm demo-seed
+```
+
+A seed cria 5 agentes, 20 clientes, 100 chamados e seus comentários e históricos. Os chamados cobrem diferentes prioridades, responsáveis, datas e estados para preencher filas, filtros e dashboards. Executar o comando novamente substitui apenas os chamados dos clientes demo, sem duplicá-los.
+
+Todas as contas criadas pela seed utilizam a senha `admin@123`. Alguns exemplos:
+
+| Perfil | E-mail |
+| --- | --- |
+| Agente | `agente.01.demo@helpdesk.local` |
+| Cliente | `cliente.01.demo@helpdesk.local` |
+
+Os agentes vão de `agente.01` a `agente.05` e os clientes de `cliente.01` a `cliente.20`, sempre com o sufixo `.demo@helpdesk.local`.
+
+Para remover somente os dados de demonstração:
+
+```bash
+docker compose --profile demo run --rm demo-clear
+```
+
+Se um agente demo tiver sido atribuído manualmente ao chamado de uma conta comum, a limpeza será interrompida para não modificar esse chamado.
+
+## Testes e CI
+
+### Backend
 
 ```bash
 cd backend
-
-./mvnw spring-boot:run
+./mvnw clean verify
 ```
 
-## Frontend
+A suíte inclui testes de services, autenticação/autorização, tratamento de erros e um teste de integração com **Testcontainers** para validar a concorrência na atribuição de chamados.
+
+### Frontend
 
 ```bash
 cd frontend
-
-npm install
-npm run dev
+npm ci
+npm run lint
+npm test
+npm run build
 ```
 
----
+O workflow do **GitHub Actions** executa automaticamente o `clean verify` do backend e `lint + test + build` do frontend em pull requests para `develop` e `main`.
 
-# Próximas funcionalidades
+## Estrutura do repositório
 
-- Dashboard
-- Administração completa de usuários
-- Deploy da aplicação
-- Ampliação da cobertura de testes
-- Melhorias na interface
-- Novas funcionalidades administrativas
+```text
+helpdesk/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── backend/
+│   ├── src/main/java/.../
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── entity/
+│   │   ├── exception/
+│   │   ├── repository/
+│   │   ├── security/
+│   │   └── service/
+│   └── src/main/resources/db/migration/
+├── frontend/
+│   └── src/
+│       ├── app/
+│       ├── features/
+│       ├── layouts/
+│       ├── pages/
+│       └── shared/
+├── docker-compose.yml
+└── .env.example
+```
 
----
+## API e documentação
 
-# Imagens
+Com o backend em execução, a especificação OpenAPI pode ser explorada pelo **Swagger UI** em:
 
-## Listagem de chamados
+```text
+http://localhost:8080/swagger-ui/index.html
+```
 
-<img width="1917" height="980" alt="image" src="https://github.com/user-attachments/assets/dcd02fef-5020-48af-9e62-01226a4145d1" />
+A documentação descreve os endpoints de autenticação, conta, chamados, comentários, histórico, filas, dashboards e administração de usuários, incluindo as restrições de acesso por perfil.
 
-## Detalhes do chamado
+## Objetivo do projeto
 
-<img width="1897" height="980" alt="image" src="https://github.com/user-attachments/assets/2defb61a-723b-4e4d-a3b8-94d821a3ce47" />
-
-## Histórico do chamado
-
-<img width="1892" height="977" alt="image" src="https://github.com/user-attachments/assets/3918a146-1f96-43a6-9cd3-87951326b79b" />
-
----
-
-# Aprendizados
-
-Durante o desenvolvimento deste projeto foram aplicados conceitos como:
-
-- Arquitetura em camadas
-- APIs REST
-- Spring Security
-- Autenticação e autorização com JWT
-- Controle de acesso baseado em perfis
-- Tratamento centralizado de exceções
-- Versionamento de banco de dados com Flyway
-- React Query para gerenciamento de estado assíncrono
-- Gerenciamento de estado com Zustand
-- Validação de formulários com React Hook Form e Zod
-- Organização de projetos Full Stack
-- Boas práticas de Clean Code
-- Git e fluxo de desenvolvimento com branches
-
----
-
-# Licença
-
-Este projeto foi desenvolvido para fins de estudo e portfólio.
+Este projeto foi desenvolvido como **projeto de portfólio e aprendizado**, com foco em práticas que aparecem em sistemas reais: modelagem de regras de negócio, segurança, concorrência, tratamento de erros, testes automatizados, migrations, organização de código e integração entre frontend e backend.

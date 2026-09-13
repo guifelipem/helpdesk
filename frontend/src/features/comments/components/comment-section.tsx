@@ -12,22 +12,27 @@ import { useAuthStore } from "@/features/auth/store/auth.store";
 import { Label } from "@/components/ui/label";
 import type { TicketStatus } from "@/features/tickets/types/ticket.types";
 import { MessageSquareText, Send } from "lucide-react";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 type CommentSectionProps = {
     ticketId: number;
     ticketStatus: TicketStatus;
+    assignedToId: number | null;
 };
 
-export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) {
+export function CommentSection({ ticketId, ticketStatus, assignedToId }: CommentSectionProps) {
     const [message, setMessage] = useState("");
 
     const user = useAuthStore((state) => state.user);
 
     const [isInternal, setIsInternal] = useState(false);
 
-    const canCreateInternalComment = user?.role === "AGENT" || user?.role === "ADMIN";
+    const isAdmin = user?.role === "ADMIN";
+    const isAgent = user?.role === "AGENT";
+    const isResponsibleAgent = isAgent && user.id === assignedToId;
+    const canCreateInternalComment = isResponsibleAgent;
 
-    const isTicketClosed = ticketStatus === "CLOSED";
+    const isTicketReadOnly = isAdmin || (isAgent && !isResponsibleAgent) || ticketStatus === "RESOLVED" || ticketStatus === "CLOSED";
 
     const { data: comments = [], isLoading, isError, error, refetch, isFetching, } = useComments(ticketId);
     const createCommentMutation = useCreateComment(ticketId);
@@ -62,7 +67,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg font-bold"><span className="flex size-8 items-center justify-center rounded-lg bg-[#ececff] text-[#5c65c0]"><MessageSquareText className="size-4" /></span>Comentários</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg font-bold"><span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary-strong"><MessageSquareText className="size-4" /></span>Comentários</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -84,8 +89,8 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                 ) : (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold text-[#301c41]">Conversa</p>
-                            <span className="rounded-full bg-[#ececff] px-2.5 py-1 text-xs font-semibold text-[#5c65c0]">
+                            <p className="text-sm font-semibold text-foreground">Conversa</p>
+                            <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
                                 {comments.length} {comments.length === 1 ? "mensagem" : "mensagens"}
                             </span>
                         </div>
@@ -95,16 +100,16 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                             return (
                                 <div
                                     key={comment.id}
-                                    className={`rounded-xl border p-4 shadow-[0_8px_24px_-22px_#301c41] ${comment.isInternal
-                                        ? "border-amber-300 bg-amber-50"
+                                    className={`rounded-xl border p-4 shadow-[0_8px_24px_-22px_#0d121c] ${comment.isInternal
+                                        ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/45"
                                         : isSupport
-                                            ? "border-[#6f95ff]/20 border-l-[3px] border-l-[#6f95ff] bg-[#f4f6ff]"
-                                            : "bg-white"
+                                            ? "border-primary/30 border-l-[3px] border-l-primary bg-primary/8"
+                                            : "border-border bg-card"
                                         }`}
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold ${isSupport ? "bg-[#5c65c0] text-white" : "bg-[#ececff] text-[#413b6b]"}`}>
+                                            <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold ${isSupport ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
                                                 {comment.author.name.charAt(0).toUpperCase()}
                                             </div>
 
@@ -129,7 +134,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                                         </span>
                                     </div>
 
-                                    <p className="mt-3 pl-10 text-sm leading-6 text-[#413b6b]">
+                                    <p className="mt-3 break-words pl-10 text-sm leading-6 text-foreground/85">
                                         {comment.message}
                                     </p>
                                 </div>
@@ -138,20 +143,30 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                     </div>
                 )}
 
-                {isTicketClosed ? (
+                {isTicketReadOnly ? (
                     <p className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
-                        Este chamado foi encerrado e não aceita novos comentários.
+                        {isAdmin
+                            ? "Modo de supervisão: os comentários públicos e internos estão disponíveis somente para leitura."
+                            : ticketStatus === "RESOLVED"
+                            ? "Este chamado aguarda a confirmação da resolução e não aceita novos comentários. Confirme ou rejeite a resolução acima."
+                            : ticketStatus === "CLOSED"
+                            ? "Este chamado foi encerrado e não aceita novos comentários."
+                            : isAgent && assignedToId === null
+                            ? "Assuma este chamado antes de adicionar comentários."
+                            : "Somente o agente responsável pode adicionar comentários neste chamado."}
                     </p>
                 ) : (
-                    <div className="space-y-3 border-t border-[#413b6b]/10 pt-5">
-                        <Label htmlFor="comment-message" className="text-[#301c41]">Adicionar comentário</Label>
+                    <div className="space-y-3 border-t border-border pt-5">
+                        <Label htmlFor="comment-message" className="text-foreground">Adicionar comentário</Label>
 
                         <Textarea
                             id="comment-message"
                             placeholder="Escreva uma resposta..."
                             value={message}
                             onChange={(event) => setMessage(event.target.value)}
-                            className="min-h-20 max-h-40 resize-y bg-[#f8f8ff]"
+                            maxLength={VALIDATION_LIMITS.comment}
+                            className="min-h-20 max-h-40 resize-y bg-muted/45"
+                            aria-describedby={createCommentMutation.error ? "comment-error" : undefined}
                         />
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -162,7 +177,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                                         type="checkbox"
                                         checked={isInternal}
                                         onChange={(event) => setIsInternal(event.target.checked)}
-                                        className="size-4 accent-[#5c65c0]"
+                                        className="size-4 accent-primary"
                                     />
 
                                     <Label htmlFor="internal-comment">Comentário interno</Label>
@@ -178,7 +193,7 @@ export function CommentSection({ ticketId, ticketStatus }: CommentSectionProps) 
                         </div>
 
                         {createCommentMutation.error && (
-                            <p className="text-sm text-destructive">{createCommentErrorMessage}</p>
+                            <p id="comment-error" role="alert" className="text-sm text-destructive">{createCommentErrorMessage}</p>
                         )}
                     </div>
                 )}

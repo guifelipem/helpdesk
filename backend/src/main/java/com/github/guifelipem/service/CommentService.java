@@ -33,6 +33,10 @@ public class CommentService {
 
         User user = authenticatedUserProvider.getAuthenticatedUser();
 
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new ForbiddenException("Administradores possuem acesso somente leitura aos comentários");
+        }
+
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow(() ->
                 new TicketNotFoundException("Chamado não encontrado"));
 
@@ -43,8 +47,13 @@ public class CommentService {
             throw new ForbiddenException("Você não tem acesso a este chamado");
         }
 
-        if (ticket.getStatus() == TicketStatus.CLOSED) {
-            throw new ForbiddenException("Não é possível comentar em um chamado encerrado");
+        if (!isClient && (ticket.getAssignedTo() == null
+                || !ticket.getAssignedTo().getId().equals(user.getId()))) {
+            throw new ForbiddenException("Somente o responsável pode comentar neste chamado");
+        }
+
+        if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new ForbiddenException("Não é possível comentar em um chamado resolvido ou encerrado");
         }
 
         if (Boolean.TRUE.equals(request.isInternal()) && isClient) {
@@ -79,6 +88,11 @@ public class CommentService {
 
         if (isClient && !isOwner) {
             throw new ForbiddenException("Você não tem acesso a este chamado");
+        }
+
+        if (user.getRole() == UserRole.AGENT && ticket.getAssignedTo() != null
+                && !ticket.getAssignedTo().getId().equals(user.getId())) {
+            throw new ForbiddenException("Somente o responsável pode acessar os comentários deste chamado");
         }
 
         return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()

@@ -3,29 +3,39 @@ import { useMyTickets, useTickets } from "@/features/tickets/hooks/use-tickets";
 import { TicketCard } from "@/features/tickets/components/ticket-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import type { TicketPriority, TicketStatus } from "@/features/tickets/types/ticket.types";
 import { TicketListSkeleton } from "@/features/tickets/components/ticket-card-skeleton";
 import { ErrorState } from "@/shared/components/error-state";
+import { useUsers } from "@/features/users/hooks/use-users";
 import { Filter, Plus, Search, Sparkles, Ticket as TicketIcon } from "lucide-react";
 
 export function TicketsPage() {
     const user = useAuthStore((state) => state.user);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const isClient = user?.role === "CLIENT";
+    const isAdmin = user?.role === "ADMIN";
 
-    const [search, setSearch] = useState("");
-    const [status, setStatus] = useState<TicketStatus | "">("");
-    const [priority, setPriority] = useState<TicketPriority | "">("");
+    const [search, setSearch] = useState(searchParams.get("search") ?? "");
+    const [status, setStatus] = useState<TicketStatus | "">((searchParams.get("status") as TicketStatus | null) ?? "");
+    const [priority, setPriority] = useState<TicketPriority | "">((searchParams.get("priority") as TicketPriority | null) ?? "");
     const [page, setPage] = useState(0);
     const [isRetrying, setIsRetrying] = useState(false);
+    const agentId = isAdmin && searchParams.get("agentId") ? Number(searchParams.get("agentId")) : undefined;
+    const active = isAdmin && searchParams.get("active") === "true";
+    const unassigned = isAdmin && searchParams.get("unassigned") === "true";
+    const agentsQuery = useUsers({ role: "AGENT", page: 0, size: 100, sort: "name,asc" }, isAdmin);
 
     const allTicketsQuery = useTickets(
         {
             search: search || undefined,
             status: status || undefined,
             priority: priority || undefined,
+            agentId,
+            active: active || undefined,
+            unassigned: unassigned || undefined,
             page,
             size: 6,
         },
@@ -34,24 +44,34 @@ export function TicketsPage() {
         },
     );
 
-    const myTicketsQuery = useMyTickets({ enabled: isClient, });
+    const myTicketsQuery = useMyTickets(
+        {
+            search: search || undefined,
+            status: status || undefined,
+            priority: priority || undefined,
+            page,
+            size: 6,
+        },
+        { enabled: isClient },
+    );
 
     const isPending = isClient ? myTicketsQuery.isPending : allTicketsQuery.isPending;
 
     const isError = isClient ? myTicketsQuery.isError : allTicketsQuery.isError;
 
-    const tickets = isClient ? myTicketsQuery.data : allTicketsQuery.data?.content;
+    const tickets = isClient ? myTicketsQuery.data?.content : allTicketsQuery.data?.content;
 
     const refetch = isClient ? myTicketsQuery.refetch : allTicketsQuery.refetch;
 
-    const pageData = allTicketsQuery.data;
+    const pageData = isClient ? myTicketsQuery.data : allTicketsQuery.data;
 
-    const hasActiveFilters = search !== "" || status !== "" || priority !== "";
+    const hasActiveFilters = search !== "" || status !== "" || priority !== "" || agentId !== undefined || active || unassigned;
 
     function handleClearFilters() {
         setSearch("");
         setStatus("");
         setPriority("");
+        setSearchParams({});
         setPage(0);
     }
 
@@ -74,10 +94,10 @@ export function TicketsPage() {
         );
     }
 
-    if (!isPending && isClient && (!tickets || tickets.length === 0)) {
+    if (!isPending && isClient && !hasActiveFilters && (!tickets || tickets.length === 0)) {
         return (
-            <div className="rounded-3xl border border-dashed border-[#5c65c0]/25 bg-white/70 px-6 py-16 text-center shadow-sm">
-                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[#ececff] text-[#5c65c0]"><TicketIcon /></div>
+            <div className="rounded-3xl border border-dashed border-primary/35 bg-card/70 px-6 py-16 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary-strong"><TicketIcon /></div>
                 <h1 className="text-2xl font-bold tracking-tight">Nenhum chamado por aqui</h1>
                 <p className="mb-6 mt-2 text-muted-foreground">Você ainda não possui chamados.</p>
 
@@ -90,73 +110,109 @@ export function TicketsPage() {
 
     return (
         <div className="space-y-7">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#301c41] via-[#413b6b] to-[#5c65c0] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#301c41] sm:px-8">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#4657a9] via-[#6366c7] to-[#256d85] px-6 py-8 text-white shadow-[0_25px_60px_-30px_#0d121c] sm:px-8">
                 <div className="absolute -right-12 -top-20 size-64 rounded-full border-[32px] border-white/5" />
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#aebfff]"><Sparkles className="size-3.5" /> Central de atendimento</div>
-                    <h1 className="text-3xl font-bold tracking-tight">Seus chamados</h1>
+                    <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/75"><Sparkles className="size-3.5" /> Central de atendimento</div>
+                    <h1 className="text-3xl font-bold tracking-tight">{isAdmin ? "Supervisão de chamados" : isClient ? "Seus chamados" : "Fila de atendimento"}</h1>
                     <p className="mt-2 max-w-xl text-sm text-white/65">
                         {isClient
                             ? "Acompanhe os chamados que você abriu."
-                            : "Gerencie os chamados do sistema."
+                            : isAdmin
+                                ? "Visualize todos os chamados e gerencie suas atribuições sem participar do atendimento."
+                                : "Acompanhe chamados disponíveis e os atendimentos atribuídos a você."
                         }
                     </p>
                 </div>
 
                 {isClient && (
-                    <Button asChild className="bg-[#6f95ff] text-white shadow-[#1c0b2b]/40 hover:bg-[#83a4ff]">
+                    <Button asChild className="bg-primary text-primary-foreground shadow-black/30 hover:bg-primary-strong">
                         <Link to="/tickets/new"><Plus /> Novo chamado</Link>
                     </Button>
                 )}
                 </div>
             </div>
 
-            {!isClient && (
-                <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-[0_15px_40px_-30px_#301c41] backdrop-blur-sm">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#413b6b]"><Filter className="size-4" /> Filtros</div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-[0_15px_40px_-30px_#256d8566] backdrop-blur-sm">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><Filter className="size-4 text-primary-strong" /> Filtros</div>
+                  <div className={`grid gap-3 md:grid-cols-2 ${isAdmin ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
                     <div className="relative">
-                    <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input className="pl-10"
-                        type="search"
-                        placeholder="Buscar por título..."
-                        value={search}
-                        onChange={(event) => {
-                            setSearch(event.target.value);
-                            setPage(0);
-                        }}
-                    /></div>
+                        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <label htmlFor="ticket-search" className="sr-only">Buscar chamados</label>
+                        <Input id="ticket-search" className="pl-10"
+                            type="search"
+                            placeholder="Buscar por título..."
+                            value={search}
+                            onChange={(event) => {
+                                setSearch(event.target.value);
+                                setPage(0);
+                            }}
+                        />
+                    </div>
 
-                    <select
-                        value={status}
-                        onChange={(event) => {
-                            setStatus(event.target.value as TicketStatus | "");
-                            setPage(0);
-                        }}
-                        className="h-11 rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
-                    >
-                        <option value="">Todos os Status</option>
-                        <option value="OPEN">Aberto</option>
-                        <option value="IN_PROGRESS">Em andamento</option>
-                        <option value="WAITING_CLIENT">Aguardando cliente</option>
-                        <option value="RESOLVED">Resolvido</option>
-                        <option value="CLOSED">Fechado</option>
-                    </select>
+                    <div>
+                        <label htmlFor="ticket-status" className="sr-only">Filtrar por status</label>
+                        <select
+                            id="ticket-status"
+                            value={status}
+                            onChange={(event) => {
+                                setStatus(event.target.value as TicketStatus | "");
+                                setPage(0);
+                            }}
+                            className="h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
+                        >
+                            <option value="">Todos os status</option>
+                            <option value="OPEN">Aberto</option>
+                            <option value="IN_PROGRESS">Em andamento</option>
+                            <option value="WAITING_CLIENT">Aguardando cliente</option>
+                            <option value="WAITING_AGENT">Aguardando suporte</option>
+                            <option value="RESOLVED">Resolvido</option>
+                            <option value="CLOSED">Fechado</option>
+                        </select>
+                    </div>
 
-                    <select
-                        value={priority}
-                        onChange={(event) => {
-                            setPriority(event.target.value as TicketPriority | "");
-                            setPage(0);
-                        }}
-                        className="h-11 rounded-xl border border-input bg-white/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
-                    >
-                        <option value="">Todas as prioridades</option>
-                        <option value="LOW">Baixa</option>
-                        <option value="MEDIUM">Média</option>
-                        <option value="HIGH">Alta</option>
-                    </select>
+                    <div>
+                        <label htmlFor="ticket-priority" className="sr-only">Filtrar por prioridade</label>
+                        <select
+                            id="ticket-priority"
+                            value={priority}
+                            onChange={(event) => {
+                                setPriority(event.target.value as TicketPriority | "");
+                                setPage(0);
+                            }}
+                            className="h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
+                        >
+                            <option value="">Todas as prioridades</option>
+                            <option value="LOW">Baixa</option>
+                            <option value="MEDIUM">Média</option>
+                            <option value="HIGH">Alta</option>
+                        </select>
+                    </div>
+
+                    {isAdmin && (
+                        <div>
+                            <label htmlFor="ticket-agent" className="sr-only">Filtrar pelo agente atribuído</label>
+                            <select
+                                id="ticket-agent"
+                                value={agentId ?? ""}
+                                disabled={agentsQuery.isPending}
+                                onChange={(event) => {
+                                    const nextParams = new URLSearchParams(searchParams);
+                                    if (event.target.value) nextParams.set("agentId", event.target.value);
+                                    else nextParams.delete("agentId");
+                                    setSearchParams(nextParams);
+                                    setPage(0);
+                                }}
+                                className="h-11 w-full rounded-xl border border-input bg-card/80 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/20"
+                            >
+                                <option value="">Todos os agentes</option>
+                                {agentsQuery.data?.content.map((agent) => (
+                                    <option key={agent.id} value={agent.id}>{agent.name}{agent.active ? "" : " (bloqueado)"}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <Button
                         type="button"
@@ -167,10 +223,9 @@ export function TicketsPage() {
                         Limpar filtros
                     </Button>
                   </div>
-                </div>
-            )}
+            </div>
 
-            {!isClient && pageData && (
+            {pageData && (
                 <p className="text-sm font-medium text-muted-foreground">
                     {pageData.totalElements} chamado
                     {pageData.totalElements === 1 ? "" : "s"} encontrado
@@ -181,7 +236,7 @@ export function TicketsPage() {
             {isPending ? (
                 <TicketListSkeleton />
             ) : !tickets || tickets.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#5c65c0]/25 bg-white/70 py-12 text-center text-muted-foreground">Nenhum chamado corresponde aos filtros selecionados.</div>
+                <div className="rounded-2xl border border-dashed border-primary/35 bg-card/70 py-12 text-center text-muted-foreground">Nenhum chamado corresponde aos filtros selecionados.</div>
             ) : (
                 <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                     {tickets?.map((ticket) => (
@@ -190,11 +245,11 @@ export function TicketsPage() {
                 </div>
             )}
 
-            {!isClient && pageData && pageData.totalPages > 1 && (
-                <div className="flex items-center justify-between rounded-2xl border border-white bg-white/70 p-3 shadow-sm">
+            {pageData && pageData.totalPages > 1 && (
+                <div className="flex items-center justify-between rounded-2xl border border-border bg-card/70 p-3 shadow-sm">
                     <Button
                         variant="outline"
-                        disabled={page === 0 || allTicketsQuery.isFetching}
+                        disabled={page === 0 || (isClient ? myTicketsQuery.isFetching : allTicketsQuery.isFetching)}
                         onClick={() => setPage((currentPage) => currentPage - 1)}
                     >
                         Anterior
@@ -206,7 +261,7 @@ export function TicketsPage() {
 
                     <Button
                         variant="outline"
-                        disabled={page >= pageData.totalPages - 1 || allTicketsQuery.isFetching}
+                        disabled={page >= pageData.totalPages - 1 || (isClient ? myTicketsQuery.isFetching : allTicketsQuery.isFetching)}
                         onClick={() => setPage((currentPage) => currentPage + 1)}
                     >
                         Próxima

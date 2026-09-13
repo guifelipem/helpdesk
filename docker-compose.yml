@@ -1,15 +1,115 @@
 services:
   postgres:
     image: postgres:16
-    container_name: helpdesk-postgres
+
     environment:
-      POSTGRES_DB: helpdesk_db
-      POSTGRES_USER: helpdesk_user
-      POSTGRES_PASSWORD: helpdesk_pass
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     ports:
       - "5433:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGIN: http://localhost:3000
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/v3/api-docs || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+
+    ports:
+      - "3000:80"
+
+    depends_on:
+      - backend
+
+  demo-seed:
+    image: postgres:16
+    profiles: ["demo"]
+
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - ./backend/src/main/resources/db/demo:/demo:ro
+
+    entrypoint: ["psql"]
+    command:
+      - "-h"
+      - "postgres"
+      - "-U"
+      - "${POSTGRES_USER}"
+      - "-d"
+      - "${POSTGRES_DB}"
+      - "-v"
+      - "ON_ERROR_STOP=1"
+      - "-f"
+      - "/demo/seed.sql"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  demo-clear:
+    image: postgres:16
+    profiles: ["demo"]
+
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - ./backend/src/main/resources/db/demo:/demo:ro
+
+    entrypoint: ["psql"]
+    command:
+      - "-h"
+      - "postgres"
+      - "-U"
+      - "${POSTGRES_USER}"
+      - "-d"
+      - "${POSTGRES_DB}"
+      - "-v"
+      - "ON_ERROR_STOP=1"
+      - "-f"
+      - "/demo/clear.sql"
+
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:

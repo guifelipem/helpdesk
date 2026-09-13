@@ -5,6 +5,7 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.EmailAlreadyExistsException;
 import com.github.guifelipem.exception.InvalidCredentialsException;
+import com.github.guifelipem.exception.UserBlockedException;
 import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -23,16 +25,18 @@ public class AuthService {
     private final JwtService jwtService;
 
     public RegisterResponse register(RegisterRequest request) {
+        String email = normalizeEmail(request.email());
 
-        if (userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new EmailAlreadyExistsException("Email já cadastrado");
         }
 
         User user = User.builder()
-                .name(request.name())
-                .email(request.email())
+                .name(request.name().trim())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(UserRole.CLIENT)
+                .active(true)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -47,8 +51,9 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
+        String email = normalizeEmail(request.email());
 
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new InvalidCredentialsException("Email ou senha inválidos"));
 
         boolean passwordMatches = passwordEncoder.matches(
@@ -58,6 +63,10 @@ public class AuthService {
 
         if (!passwordMatches) {
             throw new InvalidCredentialsException("Email ou senha inválidos");
+        }
+
+        if (!user.isActive()) {
+            throw new UserBlockedException("Usuário bloqueado");
         }
 
         String token = jwtService.generateToken(user.getEmail());
@@ -75,5 +84,9 @@ public class AuthService {
                 user.getEmail(),
                 user.getRole()
         );
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }

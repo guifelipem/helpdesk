@@ -2,53 +2,115 @@ package com.github.guifelipem.controller;
 
 import com.github.guifelipem.dto.common.PageResponse;
 import com.github.guifelipem.dto.ticket.CreateTicketRequest;
+import com.github.guifelipem.dto.ticket.RejectResolutionRequest;
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.ticket.TicketQueueSummaryResponse;
 import com.github.guifelipem.dto.ticket.UpdateTicketStatusRequest;
+import com.github.guifelipem.dto.ticket.TransferTicketRequest;
+import com.github.guifelipem.dto.ticket.AdminTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AdminTicketPerformanceResponse;
+import com.github.guifelipem.dto.ticket.AgentTicketDashboardResponse;
+import com.github.guifelipem.dto.ticket.AgentTicketPerformanceResponse;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
+import com.github.guifelipem.enums.TicketQueue;
+import com.github.guifelipem.exception.ErrorResponse;
 import com.github.guifelipem.service.TicketService;
+import com.github.guifelipem.web.PageRequestFactory;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Set;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/tickets")
 @RequiredArgsConstructor
+@Tag(name = "Chamados", description = "Abertura, consulta, atribuição e evolução de chamados")
 public class TicketController {
 
+    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of(
+            "id", "title", "status", "priority", "createdAt", "updatedAt"
+    );
+
     private final TicketService ticketService;
+    private final PageRequestFactory pageRequestFactory;
 
     @PreAuthorize("hasRole('CLIENT')")
     @PostMapping
-    public ResponseEntity<TicketResponse> createTicket(@RequestBody @Valid CreateTicketRequest request) {
+    @Operation(summary = "Abrir chamado", description = "Cria um chamado OPEN para o cliente autenticado. Permitido somente para CLIENT.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Chamado criado",
+                    content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Dados do chamado inválidos"),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> createTicket(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Título, descrição e prioridade do chamado", required = true)
+            @RequestBody @Valid CreateTicketRequest request) {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.create(request));
     }
 
     @PreAuthorize("hasRole('CLIENT')")
     @GetMapping("/me")
-    public ResponseEntity<List<TicketResponse>> findMyTickets() {
-
-        return ResponseEntity.ok(ticketService.findMyTickets());
+    @Operation(summary = "Listar meus chamados", description = "Lista os chamados criados pelo cliente autenticado com filtros, paginação e ordenação. Permitido somente para CLIENT.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Chamados do cliente"),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<PageResponse<TicketResponse>> findMyTickets(
+            @Parameter(description = "Filtra por um ou mais status, separados por vírgula") @RequestParam(required = false) Set<TicketStatus> status,
+            @Parameter(description = "Filtra pela prioridade") @RequestParam(required = false) TicketPriority priority,
+            @Parameter(description = "Busca parcial no título ou descrição") @RequestParam(required = false) String search,
+            @Parameter(description = "Índice da página, começando em zero") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Quantidade de itens por página") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Campo e direção separados por vírgula") @RequestParam(defaultValue = "updatedAt,desc") String sort
+    ) {
+        return ResponseEntity.ok(ticketService.findMyTickets(
+                status, priority, search, pageRequestFactory.create(page, size, sort, ALLOWED_SORT_PROPERTIES)
+        ));
     }
 
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<TicketResponse> findById(@PathVariable Long id) {
+    @Operation(summary = "Consultar chamado", description = "CLIENT acessa apenas chamados próprios. AGENT acessa chamados sem responsável ou atribuídos a si. ADMIN pode supervisionar qualquer chamado em modo somente leitura.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Chamado encontrado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Usuário sem acesso ao chamado", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> findById(@Parameter(description = "ID do chamado", example = "42") @PathVariable Long id) {
         return ResponseEntity.ok(ticketService.findById(id));
     }
 
-    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @PreAuthorize("hasRole('AGENT')")
     @PatchMapping("/{id}/status")
-    public ResponseEntity<TicketResponse> updateStatus(@PathVariable Long id,
+    @Operation(summary = "Alterar status do chamado", description = "Permitido somente ao AGENT responsável. Transições aceitas: OPEN → IN_PROGRESS; IN_PROGRESS → WAITING_CLIENT ou RESOLVED; WAITING_CLIENT → IN_PROGRESS; WAITING_AGENT → IN_PROGRESS. Transições do cliente possuem endpoints específicos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Status alterado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Status ausente ou transição inválida"),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil sem permissão, usuário não responsável ou tentativa de definir CLOSED", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> updateStatus(@Parameter(description = "ID do chamado", example = "42") @PathVariable Long id,
+                                                       @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Novo status do chamado", required = true)
                                                        @RequestBody @Valid UpdateTicketStatusRequest request) {
 
         return ResponseEntity.ok(ticketService.updateStatus(id, request));
@@ -56,35 +118,193 @@ public class TicketController {
 
     @PreAuthorize("hasRole('CLIENT')")
     @PatchMapping("/{id}/close")
-    public ResponseEntity<TicketResponse> closeTicket(@PathVariable Long id) {
+    @Operation(summary = "Fechar chamado resolvido", description = "O CLIENT criador confirma o fechamento de um chamado que esteja em RESOLVED.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Chamado fechado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Chamado não está em RESOLVED", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT ou cliente não é o criador", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> closeTicket(@Parameter(description = "ID do chamado", example = "42") @PathVariable Long id) {
 
         return ResponseEntity.ok(ticketService.closeTicket(id));
     }
 
-    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @PreAuthorize("hasRole('CLIENT')")
+    @PostMapping("/{id}/reject-resolution")
+    @Operation(summary = "Rejeitar resolução", description = "O CLIENT criador rejeita, com justificativa obrigatória, a resolução de um chamado RESOLVED. O chamado retorna para IN_PROGRESS e mantém o responsável atual.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Resolução rejeitada", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Justificativa inválida ou chamado não está em RESOLVED", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT ou cliente não é o criador", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> rejectResolution(
+            @Parameter(description = "ID do chamado", example = "42") @PathVariable Long id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Justificativa da rejeição", required = true)
+            @RequestBody @Valid RejectResolutionRequest request) {
+
+        return ResponseEntity.ok(ticketService.rejectResolution(id, request));
+    }
+
+    @PreAuthorize("hasRole('CLIENT')")
+    @PostMapping("/{id}/send-to-agent")
+    @Operation(summary = "Enviar chamado para análise do suporte", description = "O CLIENT criador informa explicitamente que terminou de fornecer os dados solicitados. O chamado passa de WAITING_CLIENT para WAITING_AGENT e mantém o responsável.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Chamado enviado para análise do suporte", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Chamado não está em WAITING_CLIENT ou não possui responsável", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de CLIENT ou cliente não é o criador", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> sendToAgent(
+            @Parameter(description = "ID do chamado", example = "42") @PathVariable Long id) {
+
+        return ResponseEntity.ok(ticketService.sendToAgent(id));
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
     @PatchMapping("/{id}/assign/me")
-    public ResponseEntity<TicketResponse> assignToMe(@PathVariable Long id) {
+    @Operation(summary = "Assumir chamado", description = "AGENT tenta assumir atomicamente um chamado OPEN e ainda sem responsável. No sucesso, o chamado passa para IN_PROGRESS. A atualização condicional impede que dois agentes assumam o mesmo chamado simultaneamente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Chamado atribuído ao usuário autenticado", content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Chamado sem responsável, mas não está em OPEN", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de AGENT ou ADMIN", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Chamado não encontrado", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Chamado já atribuído a outro usuário", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketResponse> assignToMe(@Parameter(description = "ID do chamado", example = "42") @PathVariable Long id) {
 
         return ResponseEntity.ok(ticketService.assignToMe(id));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/return-to-queue")
+    @Operation(summary = "Devolver chamado para a fila", description = "Remove o agente responsável, altera o status para OPEN e registra a ação administrativa no histórico.")
+    public ResponseEntity<TicketResponse> returnToQueue(@PathVariable Long id) {
+        return ResponseEntity.ok(ticketService.returnToQueue(id));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/transfer")
+    @Operation(summary = "Transferir chamado", description = "Transfere um chamado não fechado entre agentes sem atribuí-lo ao ADMIN. Chamados RESOLVED mantêm o status após a transferência.")
+    public ResponseEntity<TicketResponse> transfer(
+            @PathVariable Long id,
+            @RequestBody @Valid TransferTicketRequest request) {
+        return ResponseEntity.ok(ticketService.transfer(id, request));
+    }
+
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @GetMapping
+    @Operation(summary = "Listar chamados", description = "Lista chamados com filtros e paginação. AGENT vê chamados sem responsável e os atribuídos a si, sem poder filtrar por agente. ADMIN vê todos os chamados e pode filtrar pelo agente atribuído. Permitido somente para AGENT e ADMIN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página de chamados"),
+            @ApiResponse(responseCode = "400", description = "Filtro, paginação ou ordenação inválidos"),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de AGENT ou ADMIN", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     public ResponseEntity<PageResponse<TicketResponse>> findAll(
-            @RequestParam(required = false) TicketStatus status,
-            @RequestParam(required = false) TicketPriority priority,
-            @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort
+            @Parameter(description = "Filtra pelo status") @RequestParam(required = false) TicketStatus status,
+            @Parameter(description = "Filtra pela prioridade") @RequestParam(required = false) TicketPriority priority,
+            @Parameter(description = "Filtra pelo ID do agente atribuído. Aplicado somente para ADMIN") @RequestParam(required = false) Long agentId,
+            @Parameter(description = "Quando true, retorna apenas chamados que ainda não estão CLOSED. Aplicado somente para ADMIN") @RequestParam(required = false) Boolean active,
+            @Parameter(description = "Quando true, retorna apenas chamados sem agente responsável. Aplicado somente para ADMIN") @RequestParam(required = false) Boolean unassigned,
+            @Parameter(description = "Busca parcial, sem diferenciar maiúsculas, no título ou descrição", example = "impressora") @RequestParam(required = false) String search,
+            @Parameter(description = "Índice da página, começando em zero", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Quantidade de itens por página", example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Campo e direção separados por vírgula", example = "createdAt,desc") @RequestParam(defaultValue = "createdAt,desc") String sort
             ) {
 
-        String[] sortParams = sort.split(",");
-
-        Pageable pageable = PageRequest.of(page, size,
-                Sort.by(Sort.Direction.fromString(sortParams[1]), sortParams[0])
-        );
-
-        return ResponseEntity.ok(ticketService.findAll(status, priority, search, pageable));
+        return ResponseEntity.ok(ticketService.findAll(
+                status, priority, agentId, active, unassigned, search,
+                pageRequestFactory.create(page, size, sort, ALLOWED_SORT_PROPERTIES)
+        ));
     }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/queues/{queue}")
+    @Operation(
+            summary = "Consultar fila operacional",
+            description = "Retorna uma fila paginada do AGENT autenticado. Cada fila aplica escopo e ordenação próprios no backend."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página da fila operacional"),
+            @ApiResponse(responseCode = "400", description = "Fila ou paginação inválida"),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de AGENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<PageResponse<TicketResponse>> findQueue(
+            @Parameter(description = "Fila operacional", example = "WAITING_AGENT") @PathVariable TicketQueue queue,
+            @Parameter(description = "Índice da página, começando em zero", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Quantidade de itens por página", example = "10") @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(ticketService.findQueue(queue, pageRequestFactory.createUnsorted(page, size)));
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/queues/summary")
+    @Operation(
+            summary = "Consultar contadores das filas",
+            description = "Retorna, em uma única consulta agregada, os contadores das filas do AGENT autenticado."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Contadores das filas", content = @Content(schema = @Schema(implementation = TicketQueueSummaryResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de AGENT", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<TicketQueueSummaryResponse> summarizeQueues() {
+        return ResponseEntity.ok(ticketService.summarizeQueues());
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/agent/dashboard")
+    @Operation(
+            summary = "Consultar dashboard do agente",
+            description = "Retorna somente indicadores pessoais, desempenho recente e chamados que exigem prioridade do agente autenticado."
+    )
+    public ResponseEntity<AgentTicketDashboardResponse> summarizeAgentDashboard() {
+        return ResponseEntity.ok(ticketService.summarizeAgentDashboard());
+    }
+
+    @PreAuthorize("hasRole('AGENT')")
+    @GetMapping("/agent/dashboard/performance")
+    @Operation(summary = "Consultar desempenho do agente no período")
+    public ResponseEntity<AgentTicketPerformanceResponse> summarizeAgentPerformance(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
+    ) {
+        return ResponseEntity.ok(ticketService.summarizeAgentPerformance(from, to));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/dashboard")
+    @Operation(
+            summary = "Consultar dashboard administrativo",
+            description = "Retorna contadores globais de chamados e a quantidade de chamados ativos por agente. Todo chamado que não esteja CLOSED é considerado ativo."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Indicadores administrativos", content = @Content(schema = @Schema(implementation = AdminTicketDashboardResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Perfil diferente de ADMIN", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<AdminTicketDashboardResponse> summarizeAdminDashboard() {
+        return ResponseEntity.ok(ticketService.summarizeAdminDashboard());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/dashboard/performance")
+    @Operation(
+            summary = "Consultar desempenho administrativo no período",
+            description = "Retorna chamados criados, resolvidos e fechados, além do tempo médio entre criação e primeira resolução dentro do intervalo. O limite final é exclusivo."
+    )
+    public ResponseEntity<AdminTicketPerformanceResponse> summarizeAdminPerformance(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
+    ) {
+        return ResponseEntity.ok(ticketService.summarizeAdminPerformance(from, to));
+    }
+
 }

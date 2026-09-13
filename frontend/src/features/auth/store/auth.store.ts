@@ -10,10 +10,9 @@ type AuthState = {
     setToken: (token: string) => void;
     setUser: (user: User) => void;
     logout: () => void;
-    canAccessDashboard: () => boolean;
 };
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
     token: localStorage.getItem("helpdesk:token"),
     user: null,
 
@@ -35,10 +34,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({token: null, user: null, isAuthenticated: false,})
     },
 
-    canAccessDashboard: () => {
-        const user = get().user;
-
-        return user?.role === "AGENT" || user?.role === "ADMIN";
-    },
 }));
 

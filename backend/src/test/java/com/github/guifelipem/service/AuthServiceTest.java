@@ -5,6 +5,7 @@ import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.EmailAlreadyExistsException;
 import com.github.guifelipem.exception.InvalidCredentialsException;
+import com.github.guifelipem.exception.UserBlockedException;
 import com.github.guifelipem.repository.UserRepository;
 import com.github.guifelipem.security.JwtService;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class AuthServiceTest {
                 RegisterRequest request =
                         new RegisterRequest("Fulano", "fulano@email.com", "123456");
 
-                when(userRepository.existsByEmail(request.email()))
+                when(userRepository.existsByEmailIgnoreCase(request.email()))
                         .thenReturn(false);
 
                 when(passwordEncoder.encode(request.password()))
@@ -80,7 +81,7 @@ class AuthServiceTest {
                 RegisterRequest request =
                         new RegisterRequest("Fulano", "fulano@email.com", "123456");
 
-                when(userRepository.existsByEmail(request.email()))
+                when(userRepository.existsByEmailIgnoreCase(request.email()))
                         .thenReturn(true);
 
                 EmailAlreadyExistsException exception = assertThrows(
@@ -105,7 +106,7 @@ class AuthServiceTest {
                         .passwordHash("SenhaCodificada")
                         .build();
 
-                when(userRepository.findByEmail(request.email()))
+                when(userRepository.findByEmailIgnoreCase(request.email()))
                         .thenReturn(Optional.of(user));
 
                 when(passwordEncoder.matches(request.password(), user.getPasswordHash()))
@@ -126,7 +127,7 @@ class AuthServiceTest {
                 LoginRequest request =
                         new LoginRequest("fulano@email.com", "123456");
 
-                when(userRepository.findByEmail(request.email()))
+                when(userRepository.findByEmailIgnoreCase(request.email()))
                         .thenReturn(Optional.empty());
 
                 InvalidCredentialsException exception = assertThrows(
@@ -151,7 +152,7 @@ class AuthServiceTest {
                         .passwordHash("SenhaCodificada")
                         .build();
 
-                when(userRepository.findByEmail(request.email()))
+                when(userRepository.findByEmailIgnoreCase(request.email()))
                         .thenReturn(Optional.of(user));
 
                 when(passwordEncoder.matches(request.password(), user.getPasswordHash()))
@@ -166,6 +167,24 @@ class AuthServiceTest {
                         "Email ou senha inválidos",
                         exception.getMessage()
                 );
+        }
+
+        @Test
+        void shouldRejectLoginForBlockedUser() {
+                LoginRequest request = new LoginRequest("bloqueado@email.com", "123456");
+                User user = User.builder()
+                        .email(request.email())
+                        .passwordHash("hash")
+                        .active(false)
+                        .build();
+
+                when(userRepository.findByEmailIgnoreCase(request.email())).thenReturn(Optional.of(user));
+                when(passwordEncoder.matches(request.password(), user.getPasswordHash())).thenReturn(true);
+
+                UserBlockedException exception = assertThrows(UserBlockedException.class, () -> authService.login(request));
+
+                assertEquals("Usuário bloqueado", exception.getMessage());
+                verify(jwtService, org.mockito.Mockito.never()).generateToken(org.mockito.ArgumentMatchers.anyString());
         }
 
         @Test
@@ -186,6 +205,30 @@ class AuthServiceTest {
                 assertEquals(user.getName(), response.name());
                 assertEquals(user.getEmail(), response.email());
                 assertEquals(user.getRole(), response.role());
+        }
+
+        @Test
+        void shouldNormalizeEmailAndNameWhenRegistering() {
+                RegisterRequest request = new RegisterRequest("  Fulano  ", "  FULANO@EMAIL.COM  ", "123456");
+                when(userRepository.existsByEmailIgnoreCase("fulano@email.com")).thenReturn(false);
+                when(passwordEncoder.encode(request.password())).thenReturn("hash");
+                when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+                RegisterResponse response = authService.register(request);
+
+                assertEquals("Fulano", response.name());
+                assertEquals("fulano@email.com", response.email());
+        }
+
+        @Test
+        void shouldNormalizeEmailWhenLoggingIn() {
+                LoginRequest request = new LoginRequest("  FULANO@EMAIL.COM  ", "123456");
+                User user = User.builder().email("fulano@email.com").passwordHash("hash").active(true).build();
+                when(userRepository.findByEmailIgnoreCase("fulano@email.com")).thenReturn(Optional.of(user));
+                when(passwordEncoder.matches(request.password(), user.getPasswordHash())).thenReturn(true);
+                when(jwtService.generateToken(user.getEmail())).thenReturn("token");
+
+                assertEquals("token", authService.login(request).token());
         }
 
         @Test

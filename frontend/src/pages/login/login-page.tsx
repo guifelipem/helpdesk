@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { login, getMe } from "@/features/auth/api/auth.api";
 import { loginSchema, type LoginFormData } from "@/features/auth/schemas/login.schema";
@@ -12,7 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Headphones, LockKeyhole, Mail } from "lucide-react";
+import { Headphones, Mail } from "lucide-react";
+import { ThemeToggle } from "@/features/theme/components/theme-toggle";
+import { PasswordInput } from "@/features/auth/components/password-input";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -40,9 +44,7 @@ export function LoginPage() {
 
       return user;
     },
-    onSuccess: () => {
-      navigate("/tickets");
-    },
+    onSuccess: () => navigate("/", { replace: true }),
   });
 
   function handleSubmit(data: LoginFormData) {
@@ -56,12 +58,13 @@ export function LoginPage() {
 
   return (
     <main className="auth-background relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      <ThemeToggle className="absolute right-4 top-4 z-10 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white" />
       <div className="absolute left-[8%] top-[12%] size-56 rounded-full border border-white/10" />
       <div className="absolute bottom-[8%] right-[7%] size-80 rounded-full border border-white/8" />
-      <Card className="relative w-full max-w-md border-white/20 bg-white/96 px-2 py-2 shadow-[0_30px_80px_-25px_#00000090] backdrop-blur-xl">
+      <Card className="relative w-full max-w-md border-white/20 bg-card/96 px-2 py-2 shadow-[0_30px_80px_-25px_#00000090] backdrop-blur-xl">
         <CardHeader className="pb-2 text-center">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6f95ff] to-[#5c65c0] text-white shadow-lg shadow-[#5c65c0]/25"><Headphones className="size-6" /></div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#5c65c0]">Helpdesk</p>
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/25"><Headphones className="size-6" /></div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary-strong">Helpdesk</p>
           <CardTitle className="mt-2 text-2xl font-bold tracking-tight">Bem-vindo de volta</CardTitle>
           <CardDescription>
             Acesse sua conta para gerenciar chamados.
@@ -74,10 +77,20 @@ export function LoginPage() {
               <Label htmlFor="email">E-mail</Label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="voce@email.com" className="pl-10" {...form.register("email")} />
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="voce@email.com"
+                  className="pl-10"
+                  aria-invalid={!!form.formState.errors.email}
+                  aria-describedby={form.formState.errors.email ? "email-error" : undefined}
+                  maxLength={VALIDATION_LIMITS.email}
+                  {...form.register("email")}
+                />
               </div>
               {form.formState.errors.email && (
-                <p className="text-sm text-destructive">
+                <p id="email-error" role="alert" className="text-sm text-destructive">
                   {form.formState.errors.email.message}
                 </p>
               )}
@@ -85,19 +98,24 @@ export function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="password" type="password" placeholder="Sua senha" className="pl-10" {...form.register("password")} />
-              </div>
+              <PasswordInput
+                  id="password"
+                  autoComplete="current-password"
+                  placeholder="Sua senha"
+                  aria-invalid={!!form.formState.errors.password}
+                  aria-describedby={form.formState.errors.password ? "password-error" : undefined}
+                  maxLength={VALIDATION_LIMITS.password}
+                  {...form.register("password")}
+              />
               {form.formState.errors.password && (
-                <p className="text-sm text-destructive">
+                <p id="password-error" role="alert" className="text-sm text-destructive">
                   {form.formState.errors.password.message}
                 </p>
               )}
             </div>
 
             {loginMutation.isError && (
-              <p className="text-sm text-destructive">{errorMessage}</p>
+              <p role="alert" className="text-sm text-destructive">{errorMessage}</p>
             )}
 
             <Button
@@ -107,6 +125,13 @@ export function LoginPage() {
             >
               {loginMutation.isPending ? "Entrando..." : "Entrar"}
             </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Ainda não tem uma conta?{" "}
+              <Link to="/register" className="font-semibold text-primary-strong underline-offset-4 hover:underline">
+                Cadastre-se
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>

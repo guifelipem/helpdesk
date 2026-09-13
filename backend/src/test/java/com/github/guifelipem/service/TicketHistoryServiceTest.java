@@ -61,6 +61,7 @@ class TicketHistoryServiceTest {
                         .action(TicketHistoryAction.STATUS_CHANGED)
                         .oldValue("OPEN")
                         .newValue("IN_PROGRESS")
+                        .details("Detalhes do evento")
                         .performedBy(client)
                         .createdAt(createdAt)
                         .build();
@@ -85,6 +86,7 @@ class TicketHistoryServiceTest {
                 assertEquals(TicketHistoryAction.STATUS_CHANGED, historyResponse.action());
                 assertEquals("OPEN", historyResponse.oldValue());
                 assertEquals("IN_PROGRESS", historyResponse.newValue());
+                assertEquals("Detalhes do evento", historyResponse.details());
                 assertEquals(client.getId(), historyResponse.performedBy().id());
                 assertEquals(client.getName(), historyResponse.performedBy().name());
                 assertEquals(client.getRole(), historyResponse.performedBy().role());
@@ -171,5 +173,45 @@ class TicketHistoryServiceTest {
                         ticketHistoryService.findByTicket(1L);
 
                 assertEquals(0, response.size());
+        }
+
+        @Test
+        void shouldRejectHistoryForAgentWhoIsNotResponsible() {
+                User responsible = User.builder().id(1L).role(UserRole.AGENT).build();
+                User anotherAgent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(responsible)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(anotherAgent);
+
+                ForbiddenException exception = assertThrows(
+                        ForbiddenException.class,
+                        () -> ticketHistoryService.findByTicket(1L)
+                );
+
+                assertEquals(
+                        "Somente o responsável pode acessar o histórico deste chamado",
+                        exception.getMessage()
+                );
+        }
+        @Test
+        void shouldAllowAdminToReadHistoryFromTicketAssignedToAnotherUser() {
+                User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
+                User agent = User.builder().id(2L).role(UserRole.AGENT).build();
+                Ticket ticket = Ticket.builder()
+                        .id(1L)
+                        .createdBy(User.builder().id(3L).role(UserRole.CLIENT).build())
+                        .assignedTo(agent)
+                        .build();
+
+                when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(ticketHistoryRepository.findByTicketIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
+
+                assertEquals(0, ticketHistoryService.findByTicket(1L).size());
         }
 }

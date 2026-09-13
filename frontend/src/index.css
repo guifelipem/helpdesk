@@ -1,12 +1,17 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-destructive: var(--destructive);
@@ -15,32 +20,61 @@
   --color-ring: var(--ring);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-surface-elevated: var(--surface-elevated);
 
   --radius-md: var(--radius);
 }
 
-:root {
-  --radius: 0.875rem;
+@layer base {
+  :root {
+    color-scheme: light;
+    --radius: 0.875rem;
 
-  --background: #f5f5ff;
-  --foreground: #1c0b2b;
+    --text: #172033;
+    --background: #f6f8fb;
+    --primary: #256d85;
+    --primary-strong: #1b5266;
+    --secondary: #4657a9;
+    --accent: #6366c7;
 
-  --primary: #5c65c0;
-  --primary-foreground: #ffffff;
+    --foreground: var(--text);
+    --primary-foreground: #ffffff;
+    --secondary-foreground: #ffffff;
+    --accent-foreground: #ffffff;
+    --muted: #edf2f7;
+    --muted-foreground: #667085;
+    --destructive: #c93656;
+    --border: #dce3ec;
+    --input: #dce3ec;
+    --ring: var(--primary);
+    --card: #ffffff;
+    --card-foreground: var(--text);
+    --surface-elevated: #ffffff;
+  }
 
-  --secondary: #ececff;
-  --secondary-foreground: #301c41;
+  .dark {
+    color-scheme: dark;
+    --text: #f1f5f9;
+    --background: #0d121c;
+    --primary: #55a9c4;
+    --primary-strong: #78c4db;
+    --secondary: #7887dd;
+    --accent: #9298eb;
 
-  --muted: #eeeefa;
-  --muted-foreground: #686580;
-
-  --destructive: #dc4465;
-
-  --border: #dedcf0;
-  --input: #d8d5eb;
-  --ring: #6f95ff;
-  --card: #ffffff;
-  --card-foreground: #1c0b2b;
+    --foreground: var(--text);
+    --primary-foreground: #0d121c;
+    --secondary-foreground: #0d121c;
+    --accent-foreground: #0d121c;
+    --muted: #202a38;
+    --muted-foreground: #9daabc;
+    --destructive: #f16b86;
+    --border: #2a3647;
+    --input: #2a3647;
+    --ring: var(--primary);
+    --card: #151c28;
+    --card-foreground: var(--text);
+    --surface-elevated: #1b2432;
+  }
 }
 
 * {
@@ -49,6 +83,7 @@
 
 html {
   min-width: 320px;
+  background: var(--background);
 }
 
 body {
@@ -57,6 +92,7 @@ body {
   color: var(--foreground);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 button,
@@ -67,20 +103,20 @@ select {
 }
 
 ::selection {
-  background: #6f95ff55;
-  color: #1c0b2b;
+  background: color-mix(in srgb, var(--primary) 45%, transparent);
+  color: var(--foreground);
 }
 
 .app-shell-background {
   background:
-    radial-gradient(circle at 82% 8%, #6f95ff1f 0, transparent 28rem),
-    radial-gradient(circle at 20% 100%, #5c65c014 0, transparent 30rem),
-    #f5f5ff;
+    radial-gradient(circle at 82% 8%, color-mix(in srgb, var(--primary) 14%, transparent) 0, transparent 28rem),
+    radial-gradient(circle at 20% 100%, color-mix(in srgb, var(--accent) 10%, transparent) 0, transparent 30rem),
+    var(--background);
 }
 
 .auth-background {
   background:
-    radial-gradient(circle at 12% 16%, #6f95ff55 0, transparent 24rem),
-    radial-gradient(circle at 90% 84%, #5c65c055 0, transparent 28rem),
-    linear-gradient(135deg, #1c0b2b 0%, #301c41 50%, #413b6b 100%);
+    radial-gradient(circle at 12% 16%, #55a9c455 0, transparent 24rem),
+    radial-gradient(circle at 90% 84%, #9298eb55 0, transparent 28rem),
+    linear-gradient(135deg, #0d121c 0%, #256d85 52%, #4657a9 100%);
 }

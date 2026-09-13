@@ -29,6 +29,9 @@ public class TicketHistory {
     @Column(name = "new_value")
     private String newValue;
 
+    @Column(columnDefinition = "TEXT")
+    private String details;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

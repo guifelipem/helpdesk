@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class UserDetailsServiceImp implements UserDetailsService {
+public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
 
@@ -22,6 +22,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
                 .withUsername(user.getEmail())
                 .password(user.getPasswordHash())
                 .roles(user.getRole().name())
+                .disabled(!user.isActive())
                 .build();
     }
 }
