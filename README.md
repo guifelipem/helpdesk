@@ -66,29 +66,11 @@ O foco do projeto não é apenas CRUD. A aplicação implementa **regras de tran
 
 ## Fluxo de um chamado
 
-```mermaid
-stateDiagram-v2
-    [*] --> OPEN: cliente abre o chamado
-    OPEN --> IN_PROGRESS: agente assume
-    IN_PROGRESS --> WAITING_CLIENT: agente solicita informação
-    WAITING_CLIENT --> WAITING_AGENT: cliente responde e envia para análise
-    WAITING_AGENT --> IN_PROGRESS: agente retoma atendimento
-    IN_PROGRESS --> RESOLVED: agente resolve
-    RESOLVED --> CLOSED: cliente confirma
-    RESOLVED --> IN_PROGRESS: cliente rejeita a resolução
-```
+<img width="100%" alt="Fluxo de um chamado" src="https://github.com/user-attachments/assets/cc3f51e2-e191-46d6-b61b-da052bd6a062" />
 
 ## Arquitetura
 
-```mermaid
-flowchart LR
-    UI[React + TypeScript] -->|HTTP / JWT| SEC[Spring Security + JWT]
-    SEC --> API[Controllers REST]
-    API --> SVC[Services / Regras de negócio]
-    SVC --> REPO[Spring Data JPA]
-    REPO --> DB[(PostgreSQL)]
-    FLY[Flyway] --> DB
-```
+<img width="100%" alt="Arquitetura" src="https://github.com/user-attachments/assets/0f03bb64-3fcd-4aa0-9373-52e21d8c98cc" />
 
 O backend segue uma arquitetura em camadas, separando **controllers, services, repositories, entidades/DTOs e segurança**. No frontend, o código é organizado por **features**, com React Query para estado assíncrono, Zustand para autenticação/estado global e React Hook Form + Zod para formulários e validação.
 
