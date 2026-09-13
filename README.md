@@ -22,6 +22,7 @@ O foco do projeto não é apenas CRUD. A aplicação implementa **regras de tran
 ### Preview - Dashboard de Administrador
 
 <img width="100%" alt="Dashboard de Administrador" src="https://github.com/user-attachments/assets/cb8d1bbb-8346-4a02-b7c3-269140c1407b" />
+<br />
 
 <details>
 <summary><strong>Ver mais telas</strong></summary>
@@ -30,14 +31,17 @@ O foco do projeto não é apenas CRUD. A aplicação implementa **regras de tran
 **Detalhes do chamado**
 
 <img width="100%" alt="Detalhes de um chamado" src="https://github.com/user-attachments/assets/84baf83f-109d-4032-a57f-d0be49c366a0" />
+<br />
 
 **Filas de Atendimento de Agente**
 
 <img width="100%" alt="Filas de Atendimento de Agente" src="https://github.com/user-attachments/assets/7d1147bd-d562-4951-97ac-be777e103fe3" />
+<br />
 
 **Tela Home de Cliente**
 
 <img width="100%" alt="Tela Home de Cliente" src="https://github.com/user-attachments/assets/2374d351-5ae4-4583-8a07-25e0fe3fcabe" />
+<br />
 
 </details>
 
