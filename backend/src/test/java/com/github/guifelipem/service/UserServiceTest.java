@@ -80,7 +80,7 @@ class UserServiceTest {
         User user = buildUser(1L, UserRole.CLIENT);
         UpdateUserRoleRequest request = new UpdateUserRoleRequest(UserRole.AGENT);
 
-        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(userRepository.findByIdForUpdate(user.getId())).thenReturn(Optional.of(user));
         when(userRepository.save(user)).thenReturn(user);
 
         UserResponse response = userService.updateRole(user.getId(), request);
@@ -91,7 +91,7 @@ class UserServiceTest {
 
     @Test
     void shouldRejectRoleChangeWhenUserDoesNotExist() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.empty());
 
         UserNotFoundException exception = assertThrows(
                 UserNotFoundException.class,
@@ -104,7 +104,7 @@ class UserServiceTest {
     @Test
     void shouldRejectChangingAdministratorRole() {
         User administrator = buildUser(1L, UserRole.ADMIN);
-        when(userRepository.findById(administrator.getId())).thenReturn(Optional.of(administrator));
+        when(userRepository.findByIdForUpdate(administrator.getId())).thenReturn(Optional.of(administrator));
 
         ForbiddenException exception = assertThrows(
                 ForbiddenException.class,
@@ -118,7 +118,7 @@ class UserServiceTest {
     @Test
     void shouldRejectAssigningAdministratorRole() {
         User user = buildUser(1L, UserRole.CLIENT);
-        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(userRepository.findByIdForUpdate(user.getId())).thenReturn(Optional.of(user));
 
         ForbiddenException exception = assertThrows(
                 ForbiddenException.class,
@@ -132,7 +132,7 @@ class UserServiceTest {
     @Test
     void shouldRejectAgentDemotionWhenActiveTicketsAreAssigned() {
         User agent = buildUser(1L, UserRole.AGENT);
-        when(userRepository.findById(agent.getId())).thenReturn(Optional.of(agent));
+        when(userRepository.findByIdForUpdate(agent.getId())).thenReturn(Optional.of(agent));
         when(ticketRepository.existsByAssignedToAndStatusNot(agent, TicketStatus.CLOSED)).thenReturn(true);
 
         UserHasActiveTicketsException exception = assertThrows(
@@ -151,7 +151,7 @@ class UserServiceTest {
     @Test
     void shouldAllowAgentDemotionWhenThereAreNoActiveAssignedTickets() {
         User agent = buildUser(1L, UserRole.AGENT);
-        when(userRepository.findById(agent.getId())).thenReturn(Optional.of(agent));
+        when(userRepository.findByIdForUpdate(agent.getId())).thenReturn(Optional.of(agent));
         when(ticketRepository.existsByAssignedToAndStatusNot(agent, TicketStatus.CLOSED)).thenReturn(false);
         when(userRepository.save(agent)).thenReturn(agent);
 

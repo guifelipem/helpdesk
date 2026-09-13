@@ -294,9 +294,9 @@ public class TicketService {
 
     @Transactional
     public TicketResponse assignToMe(Long ticketId) {
-        User agent = authenticatedUserProvider.getAuthenticatedUser();
+        User agent = authenticatedUserProvider.getAuthenticatedUserForUpdate();
 
-        if (agent.getRole() != null && agent.getRole() != UserRole.AGENT) {
+        if (agent.getRole() != UserRole.AGENT) {
             throw new ForbiddenException("Somente agentes podem assumir chamados");
         }
 

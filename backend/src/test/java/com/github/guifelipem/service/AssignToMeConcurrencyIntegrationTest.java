@@ -1,12 +1,16 @@
 package com.github.guifelipem.service;
 
 import com.github.guifelipem.dto.ticket.TicketResponse;
+import com.github.guifelipem.dto.user.UpdateUserRoleRequest;
+import com.github.guifelipem.dto.user.UserResponse;
 import com.github.guifelipem.entity.Ticket;
 import com.github.guifelipem.entity.User;
 import com.github.guifelipem.enums.TicketPriority;
 import com.github.guifelipem.enums.TicketStatus;
 import com.github.guifelipem.enums.UserRole;
 import com.github.guifelipem.exception.TicketAlreadyAssignedException;
+import com.github.guifelipem.exception.ForbiddenException;
+import com.github.guifelipem.exception.UserHasActiveTicketsException;
 import com.github.guifelipem.repository.TicketHistoryRepository;
 import com.github.guifelipem.repository.TicketRepository;
 import com.github.guifelipem.repository.UserRepository;
@@ -45,6 +49,9 @@ class AssignToMeConcurrencyIntegrationTest {
 
     @Autowired
     private TicketService ticketService;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private TicketRepository ticketRepository;
@@ -108,6 +115,53 @@ class AssignToMeConcurrencyIntegrationTest {
         }
     }
 
+    @Test
+    void shouldNotAssignTicketToAgentBeingChangedToClient() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        User client = saveUser("Cliente", "role-race-client@example.com", UserRole.CLIENT, now);
+        User agent = saveUser("Agente", "role-race-agent@example.com", UserRole.AGENT, now);
+        Ticket ticket = ticketRepository.save(Ticket.builder()
+                .title("Chamado concorrente com troca de role")
+                .description("Atribuição e troca de role disputam o mesmo agente")
+                .status(TicketStatus.OPEN)
+                .priority(TicketPriority.MEDIUM)
+                .createdAt(now)
+                .updatedAt(now)
+                .createdBy(client)
+                .build());
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<AssignmentAttempt> assignmentFuture = executor.submit(
+                    () -> assignWhenReleased(ticket.getId(), agent.getEmail(), ready, start));
+            Future<RoleChangeAttempt> roleChangeFuture = executor.submit(
+                    () -> changeRoleWhenReleased(agent.getId(), ready, start));
+
+            assertTrue(ready.await(10, TimeUnit.SECONDS), "As duas requisições deveriam estar prontas");
+            start.countDown();
+
+            AssignmentAttempt assignment = getResult(assignmentFuture);
+            RoleChangeAttempt roleChange = getRoleChangeResult(roleChangeFuture);
+            User persistedAgent = userRepository.findById(agent.getId()).orElseThrow();
+            Ticket persistedTicket = ticketRepository.findById(ticket.getId()).orElseThrow();
+
+            if (assignment.response() != null) {
+                assertInstanceOf(UserHasActiveTicketsException.class, roleChange.failure());
+                assertEquals(UserRole.AGENT, persistedAgent.getRole());
+                assertEquals(agent.getId(), persistedTicket.getAssignedTo().getId());
+                assertEquals(TicketStatus.IN_PROGRESS, persistedTicket.getStatus());
+            } else {
+                assertInstanceOf(ForbiddenException.class, assignment.failure());
+                assertEquals(UserRole.CLIENT, roleChange.response().role());
+                assertEquals(UserRole.CLIENT, persistedAgent.getRole());
+                assertEquals(null, persistedTicket.getAssignedTo());
+                assertEquals(TicketStatus.OPEN, persistedTicket.getStatus());
+            }
+        }
+    }
+
     private AssignmentAttempt assignWhenReleased(
             Long ticketId,
             String agentEmail,
@@ -129,11 +183,36 @@ class AssignToMeConcurrencyIntegrationTest {
         }
     }
 
+    private RoleChangeAttempt changeRoleWhenReleased(
+            Long agentId,
+            CountDownLatch ready,
+            CountDownLatch start
+    ) throws InterruptedException {
+        ready.countDown();
+        start.await();
+
+        try {
+            return new RoleChangeAttempt(
+                    userService.updateRole(agentId, new UpdateUserRoleRequest(UserRole.CLIENT)), null
+            );
+        } catch (RuntimeException exception) {
+            return new RoleChangeAttempt(null, exception);
+        }
+    }
+
     private AssignmentAttempt getResult(Future<AssignmentAttempt> future) throws Exception {
         try {
             return future.get(15, TimeUnit.SECONDS);
         } catch (ExecutionException exception) {
             throw new AssertionError("A tentativa concorrente falhou inesperadamente", exception.getCause());
+        }
+    }
+
+    private RoleChangeAttempt getRoleChangeResult(Future<RoleChangeAttempt> future) throws Exception {
+        try {
+            return future.get(15, TimeUnit.SECONDS);
+        } catch (ExecutionException exception) {
+            throw new AssertionError("A troca de role concorrente falhou inesperadamente", exception.getCause());
         }
     }
 
@@ -148,5 +227,8 @@ class AssignToMeConcurrencyIntegrationTest {
     }
 
     private record AssignmentAttempt(TicketResponse response, RuntimeException failure) {
+    }
+
+    private record RoleChangeAttempt(UserResponse response, RuntimeException failure) {
     }
 }
