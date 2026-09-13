@@ -190,7 +190,7 @@ public class TicketController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/transfer")
-    @Operation(summary = "Transferir chamado", description = "Transfere um chamado ativo entre agentes sem atribuí-lo ao ADMIN.")
+    @Operation(summary = "Transferir chamado", description = "Transfere um chamado não fechado entre agentes sem atribuí-lo ao ADMIN. Chamados RESOLVED mantêm o status após a transferência.")
     public ResponseEntity<TicketResponse> transfer(
             @PathVariable Long id,
             @RequestBody @Valid TransferTicketRequest request) {

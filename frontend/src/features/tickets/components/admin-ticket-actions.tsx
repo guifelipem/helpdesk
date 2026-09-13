@@ -10,9 +10,10 @@ import type { Ticket } from "../types/ticket.types";
 
 export function AdminTicketActions({ ticket }: { ticket: Ticket }) {
     const [agentId, setAgentId] = useState("");
-    const canReassign = ticket.assignedTo !== null
+    const canReturnToQueue = ticket.assignedTo !== null
         && ["OPEN", "IN_PROGRESS", "WAITING_CLIENT", "WAITING_AGENT"].includes(ticket.status);
-    const agentsQuery = useActiveAgents(canReassign);
+    const canTransfer = canReturnToQueue || (ticket.assignedTo !== null && ticket.status === "RESOLVED");
+    const agentsQuery = useActiveAgents(canTransfer);
     const transfer = useTransferTicket();
     const returnToQueue = useReturnTicketToQueue();
     const availableAgents = (agentsQuery.data ?? []).filter((agent) => agent.id !== ticket.assignedTo?.id);
@@ -42,8 +43,8 @@ export function AdminTicketActions({ ticket }: { ticket: Ticket }) {
                 </div>
             </div>
 
-            {canReassign ? (
-                <div className="grid gap-3 border-t border-white/15 pt-4 md:grid-cols-[1fr_auto_auto]">
+            {canTransfer ? (
+                <div className={`grid gap-3 border-t border-white/15 pt-4 ${canReturnToQueue ? "md:grid-cols-[1fr_auto_auto]" : "md:grid-cols-[1fr_auto]"}`}>
                     <select
                         value={agentId}
                         onChange={(event) => setAgentId(event.target.value)}
@@ -56,9 +57,11 @@ export function AdminTicketActions({ ticket }: { ticket: Ticket }) {
                     <Button type="button" variant="secondary" disabled={!agentId || transfer.isPending || returnToQueue.isPending} onClick={handleTransfer}>
                         <ArrowRightLeft /> {transfer.isPending ? "Transferindo..." : "Transferir"}
                     </Button>
-                    <Button type="button" className="border-white/25 bg-white/10 text-white shadow-none hover:bg-white/20" variant="outline" disabled={transfer.isPending || returnToQueue.isPending} onClick={handleReturnToQueue}>
-                        <RotateCcw /> {returnToQueue.isPending ? "Devolvendo..." : "Devolver à fila"}
-                    </Button>
+                    {canReturnToQueue && (
+                        <Button type="button" className="border-white/25 bg-white/10 text-white shadow-none hover:bg-white/20" variant="outline" disabled={transfer.isPending || returnToQueue.isPending} onClick={handleReturnToQueue}>
+                            <RotateCcw /> {returnToQueue.isPending ? "Devolvendo..." : "Devolver à fila"}
+                        </Button>
+                    )}
                 </div>
             ) : ticket.assignedTo ? (
                 <p className="border-t border-white/15 pt-4 text-xs text-white/70">Este chamado está em um estado final e não pode ser transferido nem devolvido à fila.</p>

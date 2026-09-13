@@ -331,7 +331,7 @@ public class TicketService {
             throw new InvalidTicketManagementException("O chamado já está na fila e não possui agente responsável");
         }
 
-        if (!canBeAdministrativelyReassigned(ticket.getStatus())) {
+        if (!canBeAdministrativelyReturnedToQueue(ticket.getStatus())) {
             throw new InvalidTicketManagementException(
                     "Chamados com status " + ticket.getStatus() + " não podem ser devolvidos para a fila"
             );
@@ -365,7 +365,7 @@ public class TicketService {
             throw new InvalidTicketManagementException("Apenas chamados atribuídos podem ser transferidos");
         }
 
-        if (!canBeAdministrativelyReassigned(ticket.getStatus())) {
+        if (!canBeAdministrativelyTransferred(ticket.getStatus())) {
             throw new InvalidTicketManagementException(
                     "Chamados com status " + ticket.getStatus() + " não podem ser transferidos"
             );
@@ -618,11 +618,16 @@ public class TicketService {
         return user;
     }
 
-    private boolean canBeAdministrativelyReassigned(TicketStatus status) {
+    private boolean canBeAdministrativelyReturnedToQueue(TicketStatus status) {
         return status == TicketStatus.OPEN
                 || status == TicketStatus.IN_PROGRESS
                 || status == TicketStatus.WAITING_CLIENT
                 || status == TicketStatus.WAITING_AGENT;
+    }
+
+    private boolean canBeAdministrativelyTransferred(TicketStatus status) {
+        return canBeAdministrativelyReturnedToQueue(status)
+                || status == TicketStatus.RESOLVED;
     }
 
     private void createHistory(Ticket ticket, TicketHistoryAction action, String oldValue, String newValue, User performedBy) {
