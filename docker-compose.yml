@@ -57,5 +57,59 @@ services:
     depends_on:
       - backend
 
+  demo-seed:
+    image: postgres:16
+    profiles: ["demo"]
+
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - ./backend/src/main/resources/db/demo:/demo:ro
+
+    entrypoint: ["psql"]
+    command:
+      - "-h"
+      - "postgres"
+      - "-U"
+      - "${POSTGRES_USER}"
+      - "-d"
+      - "${POSTGRES_DB}"
+      - "-v"
+      - "ON_ERROR_STOP=1"
+      - "-f"
+      - "/demo/seed.sql"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  demo-clear:
+    image: postgres:16
+    profiles: ["demo"]
+
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - ./backend/src/main/resources/db/demo:/demo:ro
+
+    entrypoint: ["psql"]
+    command:
+      - "-h"
+      - "postgres"
+      - "-U"
+      - "${POSTGRES_USER}"
+      - "-d"
+      - "${POSTGRES_DB}"
+      - "-v"
+      - "ON_ERROR_STOP=1"
+      - "-f"
+      - "/demo/clear.sql"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   postgres_data:

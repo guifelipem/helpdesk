@@ -145,6 +145,33 @@ Novos cadastros públicos são criados como `CLIENT`. Para testar o fluxo de `AG
 
 > **Nota:** a conta acima é intencionalmente uma credencial de demonstração para ambiente local/portfólio; não representa uma estratégia adequada para produção.
 
+### Dados de demonstração opcionais
+
+Com a aplicação iniciada, é possível popular o banco com um conjunto determinístico de dados fictícios:
+
+```bash
+docker compose --profile demo run --rm demo-seed
+```
+
+A seed cria 5 agentes, 20 clientes, 100 chamados e seus comentários e históricos. Os chamados cobrem diferentes prioridades, responsáveis, datas e estados para preencher filas, filtros e dashboards. Executar o comando novamente substitui apenas os chamados dos clientes demo, sem duplicá-los.
+
+Todas as contas criadas pela seed utilizam a senha `admin@123`. Alguns exemplos:
+
+| Perfil | E-mail |
+| --- | --- |
+| Agente | `agente.01.demo@helpdesk.local` |
+| Cliente | `cliente.01.demo@helpdesk.local` |
+
+Os agentes vão de `agente.01` a `agente.05` e os clientes de `cliente.01` a `cliente.20`, sempre com o sufixo `.demo@helpdesk.local`.
+
+Para remover somente os dados de demonstração:
+
+```bash
+docker compose --profile demo run --rm demo-clear
+```
+
+Se um agente demo tiver sido atribuído manualmente ao chamado de uma conta comum, a limpeza será interrompida para não modificar esse chamado.
+
 ## Testes e CI
 
 ### Backend
