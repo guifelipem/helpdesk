@@ -143,6 +143,7 @@ export function TicketActions({ ticket }: TicketActionsProps) {
 
                     <Button
                         variant="destructive"
+                        className="bg-destructive text-white hover:bg-destructive/90 dark:text-slate-950"
                         onClick={() => setIsRejectingResolution(true)}
                         disabled={isPending || isRejectingResolution}
                     >
@@ -188,6 +189,7 @@ export function TicketActions({ ticket }: TicketActionsProps) {
                             <Button
                                 type="submit"
                                 variant="destructive"
+                                className="bg-destructive text-white hover:bg-destructive/90 dark:text-slate-950"
                                 disabled={rejectResolution.isPending || !rejectionReason.trim()}
                             >
                                 <Undo2 />
