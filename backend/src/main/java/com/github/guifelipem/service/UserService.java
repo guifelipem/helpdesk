@@ -42,8 +42,9 @@ public class UserService {
                 return users.map(this::toResponse);
         }
 
+        @Transactional
         public UserResponse updateRole(Long userId, UpdateUserRoleRequest request) {
-                User user = userRepository.findById(userId)
+                User user = userRepository.findByIdForUpdate(userId)
                         .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
 
                 if (user.getRole() == UserRole.ADMIN) {

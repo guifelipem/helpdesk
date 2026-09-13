@@ -794,9 +794,9 @@ class TicketServiceTest {
 
         @Test
         void shouldThrowTicketNotFoundExceptionWhenAssigningNonExistingTicket() {
-                User agent = User.builder().id(1L).build();
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
 
-                when(authenticatedUserProvider.getAuthenticatedUser())
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
                         .thenReturn(agent);
                 when(ticketRepository.assignIfAvailable(
                         eq(1L),
@@ -827,14 +827,14 @@ class TicketServiceTest {
                 names = {"IN_PROGRESS", "WAITING_CLIENT", "WAITING_AGENT", "RESOLVED", "CLOSED"}
         )
         void shouldThrowInvalidTicketStatusTransitionExceptionWhenAssigningNonOpenTicket(TicketStatus status) {
-                User agent = User.builder().id(1L).build();
+                User agent = User.builder().id(1L).role(UserRole.AGENT).build();
 
                 Ticket ticket = Ticket.builder()
                         .id(1L)
                         .status(status)
                         .build();
 
-                when(authenticatedUserProvider.getAuthenticatedUser())
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
                         .thenReturn(agent);
                 when(ticketRepository.assignIfAvailable(
                         eq(1L),
@@ -861,7 +861,7 @@ class TicketServiceTest {
 
         @Test
         void shouldThrowTicketAlreadyAssignedExceptionWhenTicketAlreadyAssigned() {
-                User agent = User.builder().id(2L).build();
+                User agent = User.builder().id(2L).role(UserRole.AGENT).build();
 
                 User agentAssigned = User.builder()
                         .id(1L)
@@ -873,7 +873,7 @@ class TicketServiceTest {
                         .assignedTo(agentAssigned)
                         .build();
 
-                when(authenticatedUserProvider.getAuthenticatedUser())
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
                         .thenReturn(agent);
                 when(ticketRepository.assignIfAvailable(
                         eq(1L),
@@ -903,6 +903,7 @@ class TicketServiceTest {
                 User agent = User.builder()
                         .id(1L)
                         .name("Agente")
+                        .role(UserRole.AGENT)
                         .build();
 
                 User user = User.builder()
@@ -916,7 +917,7 @@ class TicketServiceTest {
                         .status(TicketStatus.IN_PROGRESS)
                         .build();
 
-                when(authenticatedUserProvider.getAuthenticatedUser())
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate())
                         .thenReturn(agent);
 
                 when(ticketRepository.assignIfAvailable(
@@ -1277,7 +1278,18 @@ class TicketServiceTest {
         @Test
         void shouldRejectAdminTryingToAssumeTicket() {
                 User admin = User.builder().id(1L).role(UserRole.ADMIN).build();
-                when(authenticatedUserProvider.getAuthenticatedUser()).thenReturn(admin);
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate()).thenReturn(admin);
+
+                ForbiddenException exception = assertThrows(ForbiddenException.class, () -> ticketService.assignToMe(1L));
+
+                assertEquals("Somente agentes podem assumir chamados", exception.getMessage());
+                verify(ticketRepository, never()).assignIfAvailable(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldRejectAssignmentWhenLockedUserIsNoLongerAnAgent() {
+                User lockedClient = User.builder().id(1L).role(UserRole.CLIENT).build();
+                when(authenticatedUserProvider.getAuthenticatedUserForUpdate()).thenReturn(lockedClient);
 
                 ForbiddenException exception = assertThrows(ForbiddenException.class, () -> ticketService.assignToMe(1L));
 

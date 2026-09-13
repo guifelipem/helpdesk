@@ -14,10 +14,20 @@ public class AuthenticatedUserProvider {
     private final UserRepository userRepository;
 
     public User getAuthenticatedUser() {
-
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        String email = authenticatedEmail();
 
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
+    }
+
+    public User getAuthenticatedUserForUpdate() {
+        String email = authenticatedEmail();
+
+        return userRepository.findByEmailForUpdate(email)
+                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
+    }
+
+    private String authenticatedEmail() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }
